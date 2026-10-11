@@ -2,14 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#008069">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>ChatApp</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <!-- ============ LOGIN / SIGN UP ============ -->
-<section id="auth">
+<div id="splash"><div class="logo">💬</div></div>
+<section id="auth" class="hidden">
   <div class="auth-card">
     <div class="logo">💬</div>
     <h1>ChatApp</h1>
@@ -83,12 +87,20 @@
           <div id="conv-name" class="name"></div>
           <div id="conv-sub" class="sub"></div>
         </div>
+        <button id="btn-theme" class="icon-btn" title="Chat theme">🎨</button>
       </header>
       <div id="messages"></div>
       <form id="composer">
+        <label class="icon-btn" title="Send photo, video, audio or music">📎<input id="attach-file" type="file" accept="image/*,video/*,audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac" multiple hidden></label>
         <textarea id="msg-input" rows="1" placeholder="Type a message" maxlength="4000"></textarea>
+        <button id="btn-rec" class="icon-btn" type="button" title="Record a voice note">🎤</button>
         <button class="send" type="submit" title="Send">➤</button>
       </form>
+      <div id="rec-bar" class="hidden">
+        <button id="rec-cancel" class="icon-btn" type="button" title="Cancel">🗑</button>
+        <span class="rec-dot"></span><span id="rec-time">0:00</span>
+        <button id="rec-send" class="send" type="button" title="Send voice note">➤</button>
+      </div>
     </div>
   </main>
 </div>
@@ -120,6 +132,13 @@
   </div>
 </div>
 
+<div id="modal-theme" class="modal hidden">
+  <div class="modal-card">
+    <header><button class="close" data-close>✕</button><h3>Chat theme</h3></header>
+    <div id="theme-list" class="theme-list"></div>
+  </div>
+</div>
+
 <div id="status-viewer" class="hidden">
   <div id="sv-bars"></div>
   <header>
@@ -129,6 +148,8 @@
     <button id="sv-close" title="Close">✕</button>
   </header>
   <div id="sv-body"></div>
+  <button id="sv-views" class="hidden"></button>
+  <div id="sv-viewers" class="hidden"></div>
   <button id="sv-prev" class="sv-nav left" aria-label="Previous"></button>
   <button id="sv-next" class="sv-nav right" aria-label="Next"></button>
 </div>
