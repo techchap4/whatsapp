@@ -24,11 +24,8 @@ const isMobile = () => window.matchMedia('(max-width: 760px)').matches;
 
 /* ---------------- helpers ---------------- */
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const nameOf = (p) => (p && (p.full_name || p.username)) || 'Unknown';
-const initials = (p) => {
-  const n = nameOf(p);
-  return String(n).trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
-};
+const nameOf = (p) => p ? (p.full_name || p.username) : 'Unknown';
+const initials = (p) => nameOf(p).trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
 function colorFor(id = '') {
   let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 360;
   return `hsl(${h} 45% 45%)`;
@@ -81,7 +78,7 @@ document.addEventListener('pointerdown', () => {
 /* ---------------- auth screen ---------------- */
 let mode = 'login';
 function setMode(m) {
-  mode = m;
+  mode = m; hideOtp();
   $('tab-login').classList.toggle('active', m === 'login');
   $('tab-signup').classList.toggle('active', m === 'signup');
   $('signup-fields').classList.toggle('hidden', m !== 'signup');
@@ -113,19 +110,61 @@ $('auth-form').onsubmit = async (e) => {
       if (password !== $('f-password2').value) throw new Error('Passwords do not match.');
       const { data, error } = await sb.auth.signUp({ email, password, options: { data: { username, full_name: full_name || username } } });
       if (error) throw error;
-      if (!data.session) {
-        setAuthMsg('Account created. Check your email to confirm it, then log in.', true);
-        setMode('login'); setAuthMsg('Account created. Check your email to confirm it, then log in.', true);
-      }
+      if (!data.session) showOtp(email);   // account needs the 8-digit email code
     }
   } catch (err) {
     let m = err.message || 'Something went wrong.';
+    if (/not confirmed/i.test(m)) {
+      const r = await sb.auth.resend({ type: 'signup', email });
+      if (!r.error) { showOtp(email); return; }
+      m = r.error.message;
+    }
     if (/database error/i.test(m)) m = 'That username is already taken. Try another one.';
     if (/already registered/i.test(m)) m = 'This email already has an account. Use the Log in tab.';
     if (/invalid login/i.test(m)) m = 'Wrong email or password.';
     setAuthMsg(m);
   } finally { btn.disabled = false; }
 };
+
+/* ---------------- email code (OTP) verification ---------------- */
+let otpEmail = '', otpTimer = null;
+function setOtpMsg(t, ok = false) { const el = $('otp-msg'); el.textContent = t; el.classList.toggle('ok', ok); }
+function showOtp(email) {
+  otpEmail = email;
+  $('auth-form').classList.add('hidden'); $('auth-tabs').classList.add('hidden');
+  $('otp-form').classList.remove('hidden');
+  $('otp-email').textContent = email; $('f-otp').value = '';
+  setOtpMsg('Code sent. Check your inbox (and spam).', true);
+  cooldown(60); $('f-otp').focus();
+}
+function hideOtp() {
+  clearInterval(otpTimer);
+  $('otp-form').classList.add('hidden');
+  $('auth-form').classList.remove('hidden'); $('auth-tabs').classList.remove('hidden');
+}
+function cooldown(sec) {            // stops people (and the email rate limit) from spamming "resend"
+  const b = $('otp-resend'); clearInterval(otpTimer); b.disabled = true;
+  const tick = () => { if (sec <= 0) { clearInterval(otpTimer); b.disabled = false; b.textContent = 'Resend code'; } else b.textContent = `Resend in ${sec--}s`; };
+  tick(); otpTimer = setInterval(tick, 1000);
+}
+$('f-otp').oninput = (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 8); };
+$('otp-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const token = $('f-otp').value.trim();
+  if (!/^\d{8}$/.test(token)) return setOtpMsg('Enter the 8-digit code from your email.');
+  const btn = $('otp-submit'); btn.disabled = true; setOtpMsg('');
+  const { error } = await sb.auth.verifyOtp({ email: otpEmail, token, type: 'signup' });
+  btn.disabled = false;
+  if (error) return setOtpMsg(/expired|invalid/i.test(error.message) ? 'That code is wrong or has expired. Request a new one.' : error.message);
+  // success: a session now exists, onAuthStateChange opens the app
+};
+$('otp-resend').onclick = async () => {
+  setOtpMsg('');
+  const { error } = await sb.auth.resend({ type: 'signup', email: otpEmail });
+  if (error) return setOtpMsg(/rate|seconds/i.test(error.message) ? 'Too many emails sent. Please wait a few minutes and try again.' : error.message);
+  setOtpMsg('A new code was sent.', true); cooldown(60);
+};
+$('otp-back').onclick = () => setMode('signup');
 
 $('btn-logout').onclick = async () => { await sb.auth.signOut(); };
 
@@ -453,11 +492,10 @@ function showStatus() {
   $('sv-delete').classList.toggle('hidden', s.user_id !== me.id);
   trackView(s); hideViewers(); updateViewsBtn();
   const body = $('sv-body');
-  const statusText = typeof s.content === 'string' && s.content.trim() ? s.content : '';
   if (s.image_url) {
     body.style.background = '#000';
-    body.innerHTML = `<img src="${esc(s.image_url)}" alt="">${statusText ? `<div class="cap">${esc(statusText)}</div>` : ''}`;
-  } else { body.style.background = s.bg || '#00a884'; body.textContent = statusText; }
+    body.innerHTML = `<img src="${esc(s.image_url)}" alt="">${s.content ? `<div class="cap">${esc(s.content)}</div>` : ''}`;
+  } else { body.style.background = s.bg || '#00a884'; body.textContent = s.content; }
   requestAnimationFrame(() => requestAnimationFrame(() => { const bar = $('sv-bars').children[sv.i]; if (bar) bar.classList.add('run'); }));
   sv.timer = setTimeout(nextStatus, 5000);
 }
@@ -632,15 +670,8 @@ const THEMES = [
   { id: 'lavender', name: 'Lavender', bg: '#e8e0f5', out: '#cdb9f2', in: '#ffffff', text: '#24163f', dots: 'rgba(36,22,63,.07)' },
   { id: 'rose',     name: 'Rose',     bg: '#fbe1e8', out: '#f7b9cb', in: '#ffffff', text: '#3f1020', dots: 'rgba(63,16,32,.07)' },
 ];
-const themeKey = (id) => `chat-theme:${me?.id ?? 'guest'}:${id ?? 'default'}`;
-const themeOf = (id) => {
-  try {
-    const stored = localStorage.getItem(themeKey(id));
-    return THEMES.find((t) => t.id === stored) || THEMES[0];
-  } catch (e) {
-    return THEMES[0];
-  }
-};
+const themeKey = (id) => `chat-theme:${me.id}:${id}`;
+const themeOf = (id) => THEMES.find((t) => t.id === localStorage.getItem(themeKey(id))) || THEMES[0];
 function applyTheme(id) {
   const t = themeOf(id), s = $('conv').style;
   s.setProperty('--bg-chat', t.bg); s.setProperty('--bubble-out', t.out); s.setProperty('--bubble-in', t.in);

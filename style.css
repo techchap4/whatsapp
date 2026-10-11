@@ -240,3 +240,15 @@ button, .item, .icon-btn { -webkit-tap-highlight-color: transparent; touch-actio
 #sv-viewers { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; max-height: 60%; overflow-y: auto; background: #fff; color: var(--text); border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom); }
 #sv-viewers .vh { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; font-weight: 600; color: var(--green-dark); border-bottom: 1px solid var(--line); }
 #sv-viewers .vh button { font-size: 18px; color: var(--muted); }
+
+
+/* ================= UPDATE: email code (OTP) ================= */
+.otp-help { font-size: 14px; color: var(--muted); line-height: 1.45; margin-bottom: 14px; text-align: center; }
+.otp-help b { color: var(--text); word-break: break-all; }
+#f-otp { display: block; width: 100%; padding: 12px; border: 1px solid #d1d7db; border-radius: 8px; text-align: center; font-size: 26px; letter-spacing: 8px; font-variant-numeric: tabular-nums; }
+#f-otp:focus { border-color: var(--green); outline: none; box-shadow: 0 0 0 3px rgba(0,168,132,.15); }
+#otp-form .auth-msg { margin-top: 10px; }
+#otp-submit { width: 100%; }
+.otp-links { display: flex; justify-content: space-between; margin-top: 12px; }
+.otp-links button { color: var(--green-dark); font-weight: 600; font-size: 14px; padding: 6px 2px; }
+.otp-links button:disabled { color: var(--muted); cursor: default; }

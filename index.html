@@ -17,7 +17,7 @@
   <div class="auth-card">
     <div class="logo">💬</div>
     <h1>ChatApp</h1>
-    <div class="auth-tabs">
+    <div class="auth-tabs" id="auth-tabs">
       <button id="tab-login" class="active" type="button">Log in</button>
       <button id="tab-signup" type="button">Sign up</button>
     </div>
@@ -43,6 +43,18 @@
       </div>
       <p id="auth-msg" class="auth-msg"></p>
       <button id="auth-submit" class="primary" type="submit">Log in</button>
+    </form>
+
+    <!-- 8-digit email code step -->
+    <form id="otp-form" class="hidden" autocomplete="off">
+      <p class="otp-help">We sent an 8-digit code to <b id="otp-email"></b>. Enter it to verify your account.</p>
+      <input id="f-otp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" placeholder="00000000" required>
+      <p id="otp-msg" class="auth-msg"></p>
+      <button id="otp-submit" class="primary" type="submit">Verify</button>
+      <div class="otp-links">
+        <button id="otp-resend" type="button">Resend code</button>
+        <button id="otp-back" type="button">Back</button>
+      </div>
     </form>
   </div>
 </section>
