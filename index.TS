@@ -1,15 +1,6 @@
 // Supabase Edge Function: sends a Web Push so the other person's phone rings even if the app is closed.
-declare module "@supabase/supabase-js" {
-  export const createClient: any;
-}
-
-declare module "web-push" {
-  const webpush: any;
-  export default webpush;
-}
-
-import { createClient } from "@supabase/supabase-js";
-import webpush from "web-push";
+import { createClient } from "npm:@supabase/supabase-js";
+import webpush from "npm:web-push";
 
 type PushRequest = {
   to?: string;
