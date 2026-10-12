@@ -72,7 +72,7 @@ const playSend = () => { if (soundOn()) tone(620, 0, 0.1, 0.1); };
 // Browsers only allow sound after the user has interacted with the page
 document.addEventListener('pointerdown', () => {
   try { audio(); } catch (e) {}
-  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().then(() => { if (me) registerPush(); });
 }, { once: true });
 
 /* ---------------- auth screen ---------------- */
@@ -166,7 +166,7 @@ $('otp-resend').onclick = async () => {
 };
 $('otp-back').onclick = () => setMode('signup');
 
-$('btn-logout').onclick = async () => { await sb.auth.signOut(); };
+$('btn-logout').onclick = async () => { await unregisterPush(); await sb.auth.signOut(); };
 
 sb.auth.onAuthStateChange((event, session) => {
   if (session && !started) { started = true; setTimeout(() => start(session.user), 0); }
@@ -184,6 +184,7 @@ async function start(user) {
   renderAll();
   subscribe();
   initCalls();
+  registerPush();
   pruneTimer = setInterval(pruneStatuses, 60000);
 }
 function stop() {
@@ -711,6 +712,8 @@ if (window.visualViewport) {
 const ICE_SERVERS = (window.ICE_SERVERS && window.ICE_SERVERS.length) ? window.ICE_SERVERS
   : [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
 const RING_MS = 45000;
+const RESEND_MS = 2500;      // keep re-sending the invite until the other phone answers 'ringing'
+const endedCalls = new Set();  // call ids that are over (so a late/duplicate invite never rings again)
 const CALL_RE = /^\[\[call:(audio|video):(ended|missed|declined)(?::(\d+))?\]\]$/;
 const END_TEXT = { hangup: 'Call ended', cancel: 'Call cancelled', decline: 'Call declined', busy: 'User is busy', timeout: 'No answer', failed: 'Connection lost' };
 let call = null;            // the one call in progress (ringing or live)
@@ -744,6 +747,8 @@ $('messages').addEventListener('click', (e) => {   // tap a call line to call ba
 
 /* ---- signalling ---- */
 function sigChannel(peerId) {
+  const old = callOutCh[peerId];
+  if (old && (old.state === 'closed' || old.state === 'errored')) { try { sb.removeChannel(old); } catch (e) {} delete callOut[peerId]; delete callOutCh[peerId]; }
   if (!callOut[peerId]) {
     const ch = callOutCh[peerId] = sb.channel('calls-in:' + peerId, { config: { broadcast: { self: false } } });
     callOut[peerId] = new Promise((res, rej) => ch.subscribe((s) => {
@@ -773,14 +778,16 @@ function stopCalls() {
 }
 async function onSignal(ev, p) {
   if (!p || !me || p.from === me.id) return;
+  if (ev === 'end') endedCalls.add(p.callId);
   if (ev === 'invite') {
-    if (call && call.id === p.callId) return;
+    if (endedCalls.has(p.callId)) return;
+    if (call && call.id === p.callId) { if (call.dir === 'in' && !call.accepted) signal(p.from, 'ringing', { callId: p.callId }); return; }
     if (call) return signal(p.from, 'end', { callId: p.callId, reason: 'busy' });
     return ringIncoming(p);
   }
   if (!call || call.id !== p.callId || call.peerId !== p.from) return;
   const c = call;
-  if (ev === 'ringing') { if (c.dir === 'out' && !c.answered) setCallStatus('Ringing…'); }
+  if (ev === 'ringing') { c.ringing = true; if (c.dir === 'out' && !c.answered) setCallStatus('Ringing…'); }
   else if (ev === 'answer' && c.dir === 'out' && c.pc && !c.answered) {
     c.answered = true; stopRing(); setCallStatus('Connecting…');
     try { await c.pc.setRemoteDescription(p.sdp); drainIce(c); } catch (e) { console.error(e); endCall('failed'); }
@@ -818,12 +825,13 @@ const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + 
 function newCall(o) { return { pendingIce: [], outIce: [], ready: false, startedAt: 0, muted: false, camOff: false, facing: 'user', ...o }; }
 
 function buildPc(c) {
-  const pc = c.pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  const pc = c.pc = new RTCPeerConnection({ iceServers: ICE_SERVERS, iceCandidatePoolSize: 4 });
   c.stream.getTracks().forEach((t) => pc.addTrack(t, c.stream));
   c.remote = new MediaStream();
   pc.ontrack = (e) => {
     c.remote.addTrack(e.track);
-    const v = $('call-remote'); v.srcObject = c.remote; v.play().catch(() => {});
+    const v = $('call-remote'); v.srcObject = c.remote;
+    v.play().catch(() => { const go = () => { v.play().catch(() => {}); }; document.addEventListener('pointerdown', go, { once: true }); });
   };
   pc.onicecandidate = (e) => {
     if (!e.candidate) return;
@@ -865,8 +873,12 @@ async function startCall(kind) {
     buildPc(c);
     const offer = await c.pc.createOffer(); await c.pc.setLocalDescription(offer);
     if (call !== c) return;
-    await signal(c.peerId, 'invite', { callId: c.id, kind, sdp: { type: offer.type, sdp: offer.sdp } });
+    c.invite = { callId: c.id, kind, sdp: { type: offer.type, sdp: offer.sdp } };
+    await signal(c.peerId, 'invite', c.invite);
     c.invited = true; flushOut(c); startRing(false);
+    pushCall(c.peerId, c, 'invite');                       // wakes the other phone if the app is closed
+    c.resend = setInterval(() => { if (call === c && !c.ringing && !c.answered && !c.startedAt) signal(c.peerId, 'invite', c.invite); }, RESEND_MS);
+    if (!online.has(c.peerId)) setCallStatus('Calling… (not online right now)');
     c.ringTimer = setTimeout(() => { if (call === c && !c.startedAt) endCall('timeout'); }, RING_MS);
   } catch (e) { console.error(e); if (call === c) endCall('failed'); }
 }
@@ -875,10 +887,7 @@ function ringIncoming(p) {
   signal(c.peerId, 'ringing', { callId: c.id });
   showCallUI(); startRing(true);
   c.ringTimer = setTimeout(() => { if (call === c && !c.accepted) endCall('timeout', false); }, RING_MS);
-  const pr = profiles[c.peerId];
-  if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
-    try { new Notification(nameOf(pr), { body: `Incoming ${c.kind} call`, icon: pr?.avatar_url || undefined, requireInteraction: true }); } catch (e) {}
-  }
+  notifyCall(c);
 }
 async function acceptCall() {
   const c = call; if (!c || c.dir !== 'in' || c.accepted) return;
@@ -905,12 +914,14 @@ function endCall(reason, notify = true) {
     const secs = c.startedAt ? Math.round((Date.now() - c.startedAt) / 1000) : 0;
     const status = c.startedAt ? 'ended' : (reason === 'decline' || reason === 'busy') ? 'declined' : 'missed';
     logCall(c, status, secs);
+    if (!c.startedAt && (reason === 'cancel' || reason === 'timeout')) pushCall(c.peerId, c, 'missed');
   }
   cleanupCall(!notify && reason === 'cancel' ? 'Missed call' : (END_TEXT[reason] || 'Call ended'));
 }
 function cleanupCall(text) {
   const c = call; call = null; stopRing();
   if (!c) return;
+  endedCalls.add(c.id); clearInterval(c.resend); closeCallNotif();
   clearTimeout(c.ringTimer); clearTimeout(c.dcTimer); clearInterval(c.timer);
   try { c.pc && c.pc.close(); } catch (e) {}
   if (c.stream) c.stream.getTracks().forEach((t) => t.stop());
@@ -979,5 +990,47 @@ $('btn-vcall').onclick = () => startCall('video');
 $('btn-acall').onclick = () => startCall('audio');
 // best effort: tell the other person if the tab is closed mid-call
 window.addEventListener('pagehide', () => { if (call) endCall(call.startedAt ? 'hangup' : call.dir === 'out' ? 'cancel' : 'decline'); });
+
+/* ============================================================
+   UPDATE 6: ringing when the app is closed / phone locked (Web Push)
+   needs: sw.js, push_subscriptions table, 'call-push' edge function, VAPID keys (see SETUP.md)
+   ============================================================ */
+let swReg = null;
+const b64ToU8 = (b) => { const pad = '='.repeat((4 - b.length % 4) % 4), raw = atob((b + pad).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(raw, (c) => c.charCodeAt(0)); };
+async function getSw() {
+  if (!('serviceWorker' in navigator)) return null;
+  try { swReg = swReg || await navigator.serviceWorker.register('sw.js'); } catch (e) { console.warn('service worker', e); }
+  return swReg;
+}
+async function registerPush() {
+  const reg = await getSw();
+  if (!reg || !window.VAPID_PUBLIC_KEY || !('PushManager' in window) || !('Notification' in window) || Notification.permission !== 'granted' || !me) return;
+  try {
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(window.VAPID_PUBLIC_KEY) });
+    const j = sub.toJSON();
+    const { error } = await sb.from('push_subscriptions').upsert({ user_id: me.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: 'endpoint' });
+    if (error) console.warn('push subscription not saved', error.message);
+  } catch (e) { console.warn('push setup failed', e); }
+}
+async function unregisterPush() {
+  try {
+    const reg = await getSw(); const sub = reg && await reg.pushManager.getSubscription();
+    if (sub) { await sb.from('push_subscriptions').delete().eq('endpoint', sub.endpoint); await sub.unsubscribe(); }
+  } catch (e) {}
+}
+function pushCall(to, c, type) {
+  if (!window.VAPID_PUBLIC_KEY) return;
+  sb.functions.invoke('call-push', { body: { to, callId: c.id, kind: c.kind, type } }).then(({ error }) => { if (error) console.warn('call push failed', error.message); });
+}
+async function notifyCall(c) {
+  if (!('Notification' in window) || Notification.permission !== 'granted' || !document.hidden) return;
+  const pr = profiles[c.peerId], opts = { body: `Incoming ${c.kind === 'video' ? 'video' : 'voice'} call`, tag: 'call', renotify: true, requireInteraction: true, vibrate: [500, 250, 500, 250, 500], icon: pr?.avatar_url || 'icon.svg' };
+  try { const reg = await getSw(); if (reg) await reg.showNotification(nameOf(pr), opts); else new Notification(nameOf(pr), opts); } catch (e) {}
+}
+async function closeCallNotif() {
+  try { const reg = swReg || (await getSw()); (await reg.getNotifications({ tag: 'call' })).forEach((n) => n.close()); } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) closeCallNotif(); });
 
 setMode('login');

@@ -1,0 +1,9 @@
+{
+  "name": "ChatApp",
+  "short_name": "ChatApp",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#008069",
+  "theme_color": "#008069",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
