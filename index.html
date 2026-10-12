@@ -6,9 +6,15 @@
   <meta name="theme-color" content="#008069">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ChatApp">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="application-name" content="ChatApp">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="description" content="ChatApp: chat, status, voice and video calls.">
   <title>ChatApp</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -47,6 +53,9 @@
       <button id="auth-submit" class="primary" type="submit">Log in</button>
     </form>
 
+    <!-- shown only in a normal browser tab, hidden once installed -->
+    <button id="install-auth" class="install-pill hidden" type="button">⬇&nbsp; Install ChatApp</button>
+
     <!-- 8-digit email code step -->
     <form id="otp-form" class="hidden" autocomplete="off">
       <p class="otp-help">We sent an 8-digit code to <b id="otp-email"></b>. Enter it to verify your account.</p>
@@ -67,6 +76,7 @@
     <header class="sb-head">
       <div id="me-avatar" class="clickable" title="My profile"></div>
       <div class="sb-actions">
+        <button id="btn-install" class="hidden" type="button" title="Install app" aria-label="Install app">⬇</button>
         <button id="btn-new" title="New chat">＋</button>
         <button id="btn-logout" title="Log out">⏻</button>
       </div>
@@ -121,6 +131,21 @@
       </div>
     </div>
   </main>
+</div>
+
+<!-- ============ INSTALL (browser only) ============ -->
+<div id="install-banner" class="hidden" role="region" aria-label="Install app">
+  <img src="icon-192.png" alt="" width="40" height="40">
+  <div class="ib-text"><b>Install ChatApp</b><span>Full screen, faster, with call alerts</span></div>
+  <button id="install-banner-btn" class="ib-go" type="button">Install</button>
+  <button id="install-banner-x" class="ib-x" type="button" aria-label="Dismiss">✕</button>
+</div>
+
+<div id="modal-install" class="modal hidden">
+  <div class="modal-card">
+    <header><button class="close" type="button" data-close-install>✕</button><h3>Install ChatApp</h3></header>
+    <div class="install-help"><div id="install-help-body"></div></div>
+  </div>
 </div>
 
 <!-- ============ MODALS ============ -->
@@ -196,5 +221,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
+<script src="pwa.js"></script>
 </body>
 </html>

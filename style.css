@@ -323,3 +323,96 @@ button, .item, .icon-btn { -webkit-tap-highlight-color: transparent; touch-actio
 #call.ending .call-actions { display: none; }
 @keyframes callpulse { 0% { box-shadow: 0 0 0 0 rgba(37,211,102,.55); } 70% { box-shadow: 0 0 0 16px rgba(37,211,102,0); } 100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); } }
 @media (prefers-reduced-motion: reduce) { .cbtn.accept { animation: none; } }
+/* ================= UPDATE: installable app + perfect phone fit ================= */
+html { -webkit-tap-highlight-color: transparent; }
+body { background: #d1d7db; }
+
+/* ---- install button (login screen), install icon (header), install banner ---- */
+.auth-card .install-pill { order: 4; align-self: center; margin-top: 16px; padding: 9px 20px; border-radius: 999px; border: 1px solid var(--glass-border); background: rgba(255,255,255,.12); color: #fff; font-size: 13px; font-weight: 600; }
+.auth-card .install-pill:hover { background: rgba(255,255,255,.22); }
+#btn-install { color: var(--green-dark) !important; font-weight: 700; }
+
+#install-banner { position: fixed; z-index: 40; left: 16px; bottom: 16px; width: min(380px, calc(100% - 32px)); display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; background: #fff; border-radius: 14px; box-shadow: 0 6px 24px rgba(11,20,26,.28); }
+#install-banner img { border-radius: 10px; flex-shrink: 0; }
+#install-banner .ib-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+#install-banner .ib-text b { font-size: 14.5px; }
+#install-banner .ib-text span { font-size: 12px; color: var(--muted); }
+#install-banner .ib-go { padding: 9px 16px; border-radius: 999px; background: var(--green); color: #fff; font-weight: 600; font-size: 14px; }
+#install-banner .ib-go:hover { background: var(--green-dark); }
+#install-banner .ib-x { width: 32px; height: 32px; border-radius: 50%; color: var(--muted); font-size: 15px; }
+#app.chat-open ~ #install-banner { display: none; }
+
+#modal-install { z-index: 80; }
+.install-help { padding: 18px 20px calc(22px + env(safe-area-inset-bottom)); overflow-y: auto; font-size: 15px; line-height: 1.5; }
+.install-help ol { padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+.install-help p { margin-bottom: 12px; }
+.install-help .warn { padding: 10px 12px; border-radius: 8px; background: #fff3cd; color: #664d03; font-size: 14px; }
+.install-help .ic { display: inline-block; padding: 0 6px; border-radius: 6px; background: var(--teal-head); font-weight: 700; }
+
+/* ---- installed app: feel native (no text-selection / callouts on the UI) ---- */
+html.is-app body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+html.is-app .bubble, html.is-app input, html.is-app textarea { -webkit-user-select: text; user-select: text; }
+
+/* ---- login screen: scrolls safely on short phones / with the keyboard open ---- */
+#auth {
+  display: flex; flex-direction: column; align-items: center;
+  height: var(--app-h, 100dvh); min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: calc(20px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+}
+#auth .auth-card { margin: auto; flex-shrink: 0; }
+
+/* ================= PHONE LAYOUT (<= 760px) ================= */
+@media (max-width: 760px) {
+  /* app is pinned to the visible screen: no page scrolling, keyboard-safe */
+  #app { position: fixed; top: 0; left: 0; width: 100%; height: var(--app-h, 100dvh); max-width: none; overflow: hidden; }
+  .sidebar, .chat { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+
+  /* tabs move to the bottom like a native app (thumb reach) */
+  .sb-head { order: 0; }
+  .pane { order: 1; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .tabs { order: 2; border-bottom: 0; border-top: 1px solid var(--line); background: #fff; padding-bottom: env(safe-area-inset-bottom); flex-shrink: 0; }
+  .tabs button { padding: 13px 6px 12px; font-size: 14px; border-bottom: 0; border-top: 3px solid transparent; }
+  .tabs button.active { border-bottom-color: transparent; border-top-color: var(--green); }
+
+  /* thumb-friendly targets */
+  .sb-actions button, .icon-btn { width: 44px; height: 44px; }
+  .send { width: 46px; height: 46px; }
+  .back { min-width: 40px; min-height: 40px; font-size: 24px; }
+  .conv-head { gap: 8px; padding-left: 8px; padding-right: 8px; }
+  .conv-actions { gap: 0; }
+  .conv-head .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conv-info { flex: 1; }
+
+  #composer { padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); gap: 4px; }
+  #rec-bar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  #msg-input { padding: 11px 14px; }
+  #messages { padding: 12px 10px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .bubble { max-width: 86%; font-size: 15px; }
+  .bubble.media, .bubble.callmsg { max-width: 86%; }
+  .bubble.media audio { width: 100%; }
+
+  /* sheets / dialogs */
+  .modal-card { padding-bottom: env(safe-area-inset-bottom); }
+  .modal-card > header { padding-top: 16px; }
+  .theme-list { grid-template-columns: repeat(2, 1fr); }
+
+  /* status viewer + calls respect notches */
+  #status-viewer > header { padding-left: calc(14px + env(safe-area-inset-left)); padding-right: calc(14px + env(safe-area-inset-right)); }
+  #call-name { font-size: 24px; }
+  .call-actions { gap: 16px; }
+  #call.incoming .in-actions { gap: 70px; }
+
+  /* banner sits above the bottom tab bar */
+  #install-banner { left: 10px; right: 10px; width: auto; bottom: calc(66px + env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 360px) {
+  .conv-actions .icon-btn { width: 40px; height: 40px; font-size: 18px; }
+  .auth-card { padding: 26px 20px 18px; }
+}
+/* landscape phones: keep headers slim */
+@media (max-height: 480px) and (orientation: landscape) {
+  .sb-head, .conv-head { min-height: 48px; }
+  .call-top { padding-top: calc(24px + env(safe-area-inset-top)); }
+  .call-top .avatar.xl { width: 72px; height: 72px; font-size: 28px; margin-bottom: 8px; }
+}
