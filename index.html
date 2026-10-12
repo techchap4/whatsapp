@@ -99,7 +99,11 @@
           <div id="conv-name" class="name"></div>
           <div id="conv-sub" class="sub"></div>
         </div>
-        <button id="btn-theme" class="icon-btn" title="Chat theme">🎨</button>
+        <div class="conv-actions">
+          <button id="btn-vcall" class="icon-btn" type="button" title="Video call" aria-label="Video call">📹</button>
+          <button id="btn-acall" class="icon-btn" type="button" title="Voice call" aria-label="Voice call">📞</button>
+          <button id="btn-theme" class="icon-btn" title="Chat theme">🎨</button>
+        </div>
       </header>
       <div id="messages"></div>
       <form id="composer">
@@ -164,6 +168,27 @@
   <div id="sv-viewers" class="hidden"></div>
   <button id="sv-prev" class="sv-nav left" aria-label="Previous"></button>
   <button id="sv-next" class="sv-nav right" aria-label="Next"></button>
+</div>
+
+<!-- ============ CALL SCREEN (voice + video) ============ -->
+<div id="call" class="hidden">
+  <video id="call-remote" autoplay playsinline></video>
+  <video id="call-local" autoplay playsinline muted></video>
+  <div class="call-top">
+    <div id="call-avatar"></div>
+    <div id="call-name"></div>
+    <div id="call-status"></div>
+  </div>
+  <div class="call-actions in-actions">
+    <button id="call-decline" class="cbtn decline" type="button" title="Decline" aria-label="Decline"><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></button>
+    <button id="call-accept" class="cbtn accept" type="button" title="Accept" aria-label="Accept"><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></button>
+  </div>
+  <div class="call-actions live-actions">
+    <button id="call-cam" class="cbtn hidden" type="button" title="Camera on/off" aria-label="Camera on or off">📷</button>
+    <button id="call-flip" class="cbtn hidden" type="button" title="Switch camera" aria-label="Switch camera">🔄</button>
+    <button id="call-mute" class="cbtn" type="button" title="Mute" aria-label="Mute microphone">🎤</button>
+    <button id="call-end" class="cbtn end" type="button" title="End call" aria-label="End call"><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></button>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
