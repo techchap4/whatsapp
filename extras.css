@@ -1,0 +1,40 @@
+/* extras.css: styles for settings, badge, notifications, ban screen. Add after style.css */
+.vbadge{width:1.05em;height:1.05em;vertical-align:-.16em;margin-left:.28em;flex:none;display:inline-block}
+#messages .bubble{font-size:var(--msg-fs,15px)}
+#btn-bell{position:relative;background:none;border:0;font-size:1.15rem;cursor:pointer;color:inherit;padding:.4rem}
+.bell-dot{position:absolute;top:0;right:-2px;min-width:16px;height:16px;border-radius:8px;background:#e53935;color:#fff;font-size:.65rem;line-height:16px;text-align:center;padding:0 3px}
+.bell-dot.hidden{display:none}
+#btn-more{font-size:1.3rem}
+.mbody{overflow:auto;max-height:calc(100vh - 80px)}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,30px);background:#111b21;color:#fff;padding:.65rem 1rem;border-radius:10px;font-size:.9rem;opacity:0;pointer-events:none;transition:.25s;z-index:9999;max-width:90vw}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#update-banner{position:fixed;top:0;left:0;right:0;z-index:9000;display:flex;align-items:center;gap:.6rem;padding:calc(.6rem + env(safe-area-inset-top,0px)) .8rem .6rem;background:#1d9bf0;color:#fff}
+#update-banner div{flex:1;display:flex;flex-direction:column;font-size:.85rem;min-width:0}#update-banner b{font-size:.95rem}
+#update-banner button{border:0;border-radius:8px;padding:.45rem .8rem;font-weight:600;cursor:pointer;background:#fff;color:#0b6db3}
+#update-banner #ub-x{background:transparent;color:#fff;padding:.3rem}
+.notif{display:flex;gap:.7rem;padding:.8rem 1rem;border-bottom:1px solid rgba(128,128,128,.2)}
+.notif.new{background:rgba(29,155,240,.09)}.n-ic{font-size:1.4rem}.n-body{flex:1}.n-body p{margin:.2rem 0;font-size:.9rem;white-space:pre-wrap;word-break:break-word}.n-body small{opacity:.6}
+.n-go{display:block;margin-top:.5rem;border:0;border-radius:8px;background:#008069;color:#fff;padding:.4rem .8rem;cursor:pointer}
+.set-row .set-ic,.set-ic{width:2.2rem;text-align:center;font-size:1.3rem;margin-right:.4rem}
+.set-row.danger .name{color:#e53935}
+.set-me{padding-bottom:1rem;border-bottom:8px solid rgba(128,128,128,.12)}
+.set-head{display:flex;align-items:center;gap:.5rem;padding:.6rem .8rem;border-bottom:1px solid rgba(128,128,128,.2)}
+.set-head h3{margin:0;font-size:1.05rem}.set-head button{background:none;border:0;font-size:1.3rem;cursor:pointer;color:inherit}
+.set-tog,.set-sel{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.8rem 1rem;border-bottom:1px solid rgba(128,128,128,.15)}
+.set-tog span{display:flex;flex-direction:column}.set-tog small{opacity:.6;font-size:.78rem;margin-top:.15rem}
+.set-tog input{width:1.2rem;height:1.2rem;accent-color:#008069;flex:none}
+.set-sel select{max-width:50%;padding:.4rem;border-radius:8px;border:1px solid rgba(128,128,128,.4);background:transparent;color:inherit}
+.set-note{padding:.7rem 1rem;font-size:.82rem;opacity:.65;margin:0}
+.set-form{padding:1rem;display:flex;flex-direction:column;gap:.55rem;border-bottom:8px solid rgba(128,128,128,.1)}
+.set-form h4{margin:0}.set-form p{margin:0;font-size:.88rem;opacity:.8}
+.set-form label{display:flex;flex-direction:column;gap:.25rem;font-size:.85rem}
+.set-form input,.set-form select,.set-form textarea{padding:.6rem;border-radius:8px;border:1px solid rgba(128,128,128,.4);background:transparent;color:inherit;font:inherit}
+.dangerbtn{background:#e53935!important}.ghostbtn{background:transparent!important;color:#008069!important;border:1px solid #008069!important}
+.mini{border:1px solid #008069;color:#008069;background:none;border-radius:8px;padding:.3rem .7rem;cursor:pointer}
+.menu-who{display:flex;align-items:center;gap:.7rem;padding:1rem}
+.vcard{margin:.8rem 1rem;padding:.9rem;border-radius:12px;background:rgba(0,128,105,.08);display:flex;flex-direction:column;gap:.4rem;font-size:.88rem}
+.vcard b{font-size:.95rem;display:flex;align-items:center;gap:.2rem}.vcard.ok{background:rgba(29,155,240,.12)}.vcard.wait{background:rgba(249,168,37,.15)}.vrej{color:#e53935}
+#ban-screen{position:fixed;inset:0;z-index:10000;background:#0b141a;display:flex;align-items:center;justify-content:center;padding:1rem}
+.ban-card{background:#fff;color:#111b21;border-radius:16px;padding:1.5rem;max-width:380px;width:100%;display:flex;flex-direction:column;gap:.7rem;text-align:center}
+.ban-card textarea{padding:.6rem;border-radius:8px;border:1px solid #ccc;font:inherit}.ban-ic{font-size:2.6rem}.ban-card h2{margin:0}.ban-card p{margin:0}
+.ban-card .ghost{background:none;border:0;color:#555;cursor:pointer;padding:.4rem}

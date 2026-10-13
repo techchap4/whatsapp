@@ -31,7 +31,7 @@ function colorFor(id = '') {
   return `hsl(${h} 45% 45%)`;
 }
 function avatar(p, cls = '') {
-  if (p && p.avatar_url) return `<img class="avatar ${cls}" src="${esc(p.avatar_url)}" alt="">`;
+  if (p && p.avatar_url && canSee(p, 'photo')) return `<img class="avatar ${cls}" src="${esc(p.avatar_url)}" alt="">`;
   return `<div class="avatar ${cls}" style="background:${colorFor(p?.id)}">${esc(initials(p))}</div>`;
 }
 const timeStr = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -180,15 +180,17 @@ async function start(user) {
   $('auth').classList.add('hidden'); $('splash').classList.add('hidden');
   $('app').classList.remove('hidden');
   await loadProfiles();
+  if (checkBanned()) return;
   await Promise.all([loadMessages(), loadStatuses()]);
   renderAll();
   subscribe();
   initCalls();
+  initExtras();
   registerPush();
   pruneTimer = setInterval(pruneStatuses, 60000);
 }
 function stop() {
-  stopCalls();
+  stopCalls(); stopExtras();
   started = false; me = null; profiles = {}; messages = []; statuses = []; activeId = null; statusViews = {}; clearInterval(pruneTimer);
   if (realtimeCh) sb.removeChannel(realtimeCh);
   if (presenceCh) sb.removeChannel(presenceCh);
@@ -250,7 +252,7 @@ function subscribe() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'statuses' }, () => loadStatuses())
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'status_views' }, () => loadViews())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (p) => {
-      if (p.new && p.new.id) { profiles[p.new.id] = p.new; renderAll(); if (activeId) openHeader(); }
+      if (p.new && p.new.id) { profiles[p.new.id] = p.new; if (p.new.id === me.id && checkBanned()) return; renderAll(); if (activeId) openHeader(); }
     })
     .subscribe();
 
@@ -268,13 +270,14 @@ function onMessage(m) {
   if (incoming) {
     const viewing = activeId === m.sender_id && !document.hidden;
     if (viewing) markRead(m.sender_id);
-    if (!parseCall(m)) { playReceive(); if (!viewing) desktopNotify(m); }
+    if (!parseCall(m) && S().notif.messages) { playReceive(); if (!viewing) desktopNotify(m); }
   }
   renderList();
   if (activeId && (m.sender_id === activeId || m.receiver_id === activeId)) renderMessages(true);
   updateTitle();
 }
 function desktopNotify(m) {
+  if (!S().notif.desktop) return;
   if (!('Notification' in window) || Notification.permission !== 'granted' || !document.hidden) return;
   const p = profiles[m.sender_id];
   try { new Notification(nameOf(p), { body: previewText(m), icon: p?.avatar_url || undefined }); } catch (e) {}
@@ -305,7 +308,7 @@ document.querySelectorAll('.tabs button').forEach((b) => (b.onclick = () => swit
 function switchTab(t) {
   currentTab = t;
   document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === t));
-  ['chats', 'status', 'profile'].forEach((x) => $('pane-' + x).classList.toggle('hidden', x !== t));
+  ['chats', 'status', 'profile', 'settings'].forEach((x) => $('pane-' + x).classList.toggle('hidden', x !== t));
 }
 $('me-avatar').onclick = () => switchTab('profile');
 
@@ -327,11 +330,11 @@ function renderList() {
   });
   $('chat-list').innerHTML = list.length ? list.map((c) => {
     const p = profiles[c.id], m = c.last, mine = m.sender_id === me.id;
-    const tick = mine ? `<span class="tick ${m.read ? 'read' : ''}">${m.read ? '✓✓' : '✓'}</span> ` : '';
+    const tick = mine ? tickHtml(m) + ' ' : '';
     return `<button class="item ${c.id === activeId ? 'active' : ''}" data-id="${c.id}">
       ${avatar(p)}
       <div class="body">
-        <div class="top"><span class="name">${esc(nameOf(p))}</span><span class="time ${c.unread ? 'unread' : ''}">${listTime(m.created_at)}</span></div>
+        <div class="top"><span class="name">${esc(nameOf(p))}${vb(p)}</span><span class="time ${c.unread ? 'unread' : ''}">${listTime(m.created_at)}</span></div>
         <div class="bottom"><span class="preview">${tick}${esc(previewText(m))}</span>${c.unread ? `<span class="badge">${c.unread}</span>` : ''}</div>
       </div></button>`;
   }).join('') : `<div class="empty-note">${q ? 'No chats match your search.' : 'No chats yet.<br>Tap ＋ at the top to message someone.'}</div>`;
@@ -351,8 +354,8 @@ function openChat(id) {
 function openHeader() {
   const p = profiles[activeId];
   $('conv-avatar').innerHTML = avatar(p, 'sm');
-  $('conv-name').textContent = nameOf(p);
-  $('conv-sub').textContent = online.has(activeId) ? 'online' : '@' + (p?.username || '');
+  $('conv-name').innerHTML = esc(nameOf(p)) + vb(p);
+  $('conv-sub').textContent = online.has(activeId) && canSee(p, 'online') ? 'online' : '@' + (p?.username || '');
 }
 function renderMessages(scroll) {
   const box = $('messages');
@@ -363,7 +366,7 @@ function renderMessages(scroll) {
     const d = dayLabel(m.created_at);
     if (d !== lastDay) { html += `<div class="day">${d}</div>`; lastDay = d; }
     const mine = m.sender_id === me.id;
-    const tick = mine ? `<span class="tick ${m.read ? 'read' : ''}">${m.read ? '✓✓' : '✓'}</span>` : '';
+    const tick = mine ? tickHtml(m) : '';
     html += msgHtml(m, mine, tick);
   }
   box.innerHTML = html;
@@ -375,7 +378,7 @@ $('btn-back').onclick = () => { activeId = null; $('app').classList.remove('chat
 const input = $('msg-input');
 input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 120) + 'px'; });
 input.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey && !isMobile()) { e.preventDefault(); $('composer').requestSubmit(); }
+  if (e.key === 'Enter' && !e.shiftKey && S().chats.enterSend && !isMobile()) { e.preventDefault(); $('composer').requestSubmit(); }
 });
 $('composer').onsubmit = async (e) => {
   e.preventDefault();
@@ -400,8 +403,8 @@ function renderContacts() {
     .sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
   $('contact-list').innerHTML = list.length ? list.map((p) => `
     <button class="item" data-id="${p.id}">${avatar(p)}
-      <div class="body"><div class="top"><span class="name">${esc(nameOf(p))}</span></div>
-      <div class="bottom"><span class="preview">${esc(p.about || '')}</span></div></div></button>`).join('')
+      <div class="body"><div class="top"><span class="name">${esc(nameOf(p))}${vb(p)}</span></div>
+      <div class="bottom"><span class="preview">${esc(canSee(p, 'about') ? (p.about || '') : '')}</span></div></div></button>`).join('')
     : '<div class="empty-note">No other users found yet.<br>Ask a friend to sign up!</div>';
   $('contact-list').querySelectorAll('.item').forEach((b) => (b.onclick = () => openChat(b.dataset.id)));
 }
@@ -430,7 +433,7 @@ function renderStatusPane() {
     ${others.length ? others.map((id) => `
       <button class="item" data-uid="${id}">
         <div class="ring">${avatar(profiles[id])}</div>
-        <div class="body"><div class="top"><span class="name">${esc(nameOf(profiles[id]))}</span></div>
+        <div class="body"><div class="top"><span class="name">${esc(nameOf(profiles[id]))}${vb(profiles[id])}</span></div>
         <div class="bottom"><span class="preview">${listTime(g[id].at(-1).created_at)}</span></div></div>
       </button>`).join('') : '<div class="empty-note">No recent updates from your contacts.</div>'}`;
   $('my-status').onclick = () => (mine.length ? openViewer(me.id) : openComposer());
@@ -680,7 +683,7 @@ const THEMES = [
   { id: 'rose',     name: 'Rose',     bg: '#fbe1e8', out: '#f7b9cb', in: '#ffffff', text: '#3f1020', dots: 'rgba(63,16,32,.07)' },
 ];
 const themeKey = (id) => `chat-theme:${me.id}:${id}`;
-const themeOf = (id) => THEMES.find((t) => t.id === localStorage.getItem(themeKey(id))) || THEMES[0];
+const themeOf = (id) => THEMES.find((t) => t.id === localStorage.getItem(themeKey(id))) || THEMES.find((t) => t.id === S().chats.theme) || THEMES[0];
 function applyTheme(id) {
   const t = themeOf(id), s = $('conv').style;
   s.setProperty('--bg-chat', t.bg); s.setProperty('--bubble-out', t.out); s.setProperty('--bubble-in', t.in);
@@ -783,6 +786,7 @@ async function onSignal(ev, p) {
     if (endedCalls.has(p.callId)) return;
     if (call && call.id === p.callId) { if (call.dir === 'in' && !call.accepted) signal(p.from, 'ringing', { callId: p.callId }); return; }
     if (call) return signal(p.from, 'end', { callId: p.callId, reason: 'busy' });
+    if (isBlocked(p.from)) return;
     return ringIncoming(p);
   }
   if (!call || call.id !== p.callId || call.peerId !== p.from) return;
@@ -803,8 +807,8 @@ function startRing(incoming) {
   stopRing();
   const once = () => {
     if (incoming) {
-      tone(740, 0, .25, .25); tone(988, .3, .25, .25); tone(740, .9, .25, .25); tone(988, 1.2, .25, .25);
-      try { navigator.vibrate && navigator.vibrate([700, 300, 700]); } catch (e) {}
+      if (S().notif.ringtone) { tone(740, 0, .25, .25); tone(988, .3, .25, .25); tone(740, .9, .25, .25); tone(988, 1.2, .25, .25); }
+      try { if (S().notif.vibrate) navigator.vibrate && navigator.vibrate([700, 300, 700]); } catch (e) {}
     } else tone(440, 0, 1.0, .08);       // ringback tone for the caller
   };
   once(); ringLoop = setInterval(once, incoming ? 3000 : 3500);
@@ -862,6 +866,7 @@ function onConnected(c) {
 async function startCall(kind) {
   if (!activeId) return;
   if (call) return alert('You are already on a call.');
+  if (isBlocked(activeId)) return alert('Unblock this contact to call them.');
   if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) return alert('Calls are not supported on this browser (the site must also be opened over https).');
   const c = call = newCall({ id: uid(), peerId: activeId, kind, dir: 'out' });
   showCallUI();

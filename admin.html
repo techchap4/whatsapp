@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0f2d2a">
+<title>ChatApp Admin</title>
+<style>
+:root{--bg:#f3f5f4;--card:#fff;--ink:#14211f;--mute:#6a7a77;--line:#e1e7e5;--brand:#008069;--brand-ink:#fff;--danger:#d93a32;--warn:#c98100;--blue:#1d9bf0;--side:#0f2d2a;--side-ink:#cfe3df}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1513;--card:#122320;--ink:#e6f1ee;--mute:#8aa19c;--line:#223733;--side:#081211}}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.hidden{display:none!important}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn{border:0;border-radius:8px;padding:.5rem .85rem;background:var(--brand);color:var(--brand-ink);font-weight:600}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:var(--danger)}.btn.blue{background:var(--blue)}.btn.sm{padding:.3rem .6rem;font-size:.82rem}
+.btn:disabled{opacity:.5}
+input,select,textarea{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:.55rem .7rem;width:100%}
+label{display:block;font-size:.83rem;color:var(--mute);margin-bottom:.9rem}label>*{margin-top:.25rem;color:var(--ink)}
+/* login */
+#gate{min-height:100%;display:grid;place-items:center;padding:1rem}
+.gate-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1.6rem;width:100%;max-width:360px}
+.gate-card h1{margin:0 0 .2rem;font-size:1.3rem}.gate-card p{color:var(--mute);margin:0 0 1rem}
+.err{color:var(--danger);font-size:.88rem;min-height:1.2em}
+/* shell */
+#shell{display:grid;grid-template-columns:230px 1fr;min-height:100%}
+aside{background:var(--side);color:var(--side-ink);padding:1rem .7rem;display:flex;flex-direction:column;gap:.2rem;position:sticky;top:0;height:100vh}
+aside h2{font-size:1.05rem;margin:.2rem .6rem 1rem;color:#fff}
+aside nav button{display:flex;align-items:center;justify-content:space-between;width:100%;text-align:left;background:none;border:0;color:inherit;padding:.65rem .75rem;border-radius:8px}
+aside nav button:hover{background:rgba(255,255,255,.07)}aside nav button.on{background:var(--brand);color:#fff}
+.cnt{background:#e53935;color:#fff;border-radius:10px;font-size:.72rem;padding:0 .45rem;min-width:1.2rem;text-align:center}
+.me{margin-top:auto;font-size:.8rem;padding:.6rem .75rem;border-top:1px solid rgba(255,255,255,.12)}
+.me button{background:none;border:0;color:#9fd8cc;padding:0;text-decoration:underline}
+main{padding:1.4rem;min-width:0}
+h1.t{margin:0 0 1rem;font-size:1.35rem}
+.bar{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem}.bar>*{width:auto;flex:0 1 auto}.bar input{flex:1 1 220px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.8rem;margin-bottom:1.2rem}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1rem}.stat b{display:block;font-size:1.8rem;line-height:1.1}.stat span{color:var(--mute);font-size:.82rem}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tablewrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:640px}
+th,td{text-align:left;padding:.65rem .8rem;border-bottom:1px solid var(--line);vertical-align:middle}th{font-size:.78rem;color:var(--mute);font-weight:600}
+tr:last-child td{border-bottom:0}
+.who{display:flex;align-items:center;gap:.6rem;min-width:0}
+.av{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;display:grid;place-items:center;color:#fff;font-weight:700;font-size:.85rem}
+.who b{display:flex;align-items:center}.who small{color:var(--mute);display:block}
+.vbadge{width:1.05em;height:1.05em;margin-left:.25em}
+.chip{display:inline-block;border-radius:20px;padding:.1rem .55rem;font-size:.74rem;font-weight:600;background:var(--line)}
+.chip.ok{background:rgba(29,155,240,.15);color:var(--blue)}.chip.bad{background:rgba(217,58,50,.15);color:var(--danger)}.chip.wait{background:rgba(201,129,0,.17);color:var(--warn)}.chip.adm{background:rgba(0,128,105,.16);color:var(--brand)}
+.acts{display:flex;gap:.35rem;flex-wrap:wrap}
+.card{padding:1rem;border-bottom:1px solid var(--line);display:grid;gap:.5rem}.card:last-child{border-bottom:0}
+.card .row{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:flex-start}
+.card p{margin:0;white-space:pre-wrap;word-break:break-word}.card .meta{color:var(--mute);font-size:.82rem}
+.doc{max-width:240px;border-radius:8px;border:1px solid var(--line);display:block}
+.tabs2{display:flex;gap:.3rem;margin-bottom:1rem;flex-wrap:wrap}.tabs2 button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:20px;padding:.3rem .8rem}.tabs2 button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.empty{padding:2rem;text-align:center;color:var(--mute)}
+.two{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:1rem;align-items:start}
+.pad{padding:1rem}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:.6rem 1rem;border-radius:10px;z-index:99}
+#menu{display:none}
+@media (max-width:820px){
+  #shell{grid-template-columns:1fr}
+  aside{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:.6rem}aside h2{margin:0 .5rem 0 0}
+  aside nav{display:flex;gap:.2rem;flex-wrap:wrap}aside nav button{padding:.45rem .6rem}.me{margin:0 0 0 auto;border:0;padding:0}
+  .two{grid-template-columns:1fr}main{padding:.9rem}
+}
+</style>
+</head>
+<body>
+<section id="gate" class="hidden">
+  <form class="gate-card" id="gate-form">
+    <h1>ChatApp Admin</h1><p>Sign in with your admin account.</p>
+    <label>Email<input id="g-email" type="email" required autocomplete="email"></label>
+    <label>Password<input id="g-pw" type="password" required autocomplete="current-password"></label>
+    <p class="err" id="g-err"></p>
+    <button class="btn" style="width:100%" type="submit">Sign in</button>
+  </form>
+</section>
+
+<div id="shell" class="hidden">
+  <aside>
+    <h2>ChatApp Admin</h2>
+    <nav id="nav">
+      <button data-v="overview" class="on">Overview</button>
+      <button data-v="users">Users</button>
+      <button data-v="verify">Verification <span class="cnt hidden" id="c-verify"></span></button>
+      <button data-v="reports">Reports and appeals <span class="cnt hidden" id="c-reports"></span></button>
+      <button data-v="notify">Send notification</button>
+    </nav>
+    <div class="me"><span id="me-name"></span><br><button id="out" type="button">Sign out</button></div>
+  </aside>
+  <main id="view"></main>
+</div>
+<div id="toast" class="hidden"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

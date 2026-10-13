@@ -16,6 +16,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="extras.css">
 </head>
 <body>
 
@@ -86,6 +87,7 @@
       <button data-tab="chats" class="active">Chats <span id="unread-total" class="badge hidden"></span></button>
       <button data-tab="status">Status</button>
       <button data-tab="profile">Profile</button>
+      <button data-tab="settings">Settings</button>
     </nav>
 
     <div id="pane-chats" class="pane">
@@ -94,6 +96,7 @@
     </div>
     <div id="pane-status" class="pane hidden"></div>
     <div id="pane-profile" class="pane hidden"></div>
+    <div id="pane-settings" class="pane hidden"></div>
   </aside>
 
   <main class="chat">
@@ -221,6 +224,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
+<script src="extras.js"></script>
 <script src="pwa.js"></script>
 </body>
 </html>
