@@ -308,6 +308,7 @@ document.querySelectorAll('.tabs button').forEach((b) => (b.onclick = () => swit
 function switchTab(t) {
   currentTab = t;
   document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === t));
+  $('chat-search').classList.toggle('hidden', t !== 'chats');
   ['chats', 'status', 'profile', 'settings'].forEach((x) => $('pane-' + x).classList.toggle('hidden', x !== t));
 }
 $('me-avatar').onclick = () => switchTab('profile');
