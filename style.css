@@ -360,3 +360,19 @@ img{display:block}
 .cbtn.off{background:#fff;color:#111}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* Added app theme settings and message controls */
+.settings-added{padding:20px;gap:18px}
+.setting-block{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.setting-block h3{margin:0 0 6px;font-size:1rem}
+.setting-block p{margin:4px 0 12px;color:var(--mute);font-size:.9rem}
+.app-theme-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.app-theme-option{display:flex;align-items:center;gap:10px;text-align:left;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:.82rem}
+.app-theme-option.selected{outline:2px solid var(--green);border-color:var(--green)}
+.app-theme-option small{color:var(--green);font-weight:700}
+.theme-swatch{width:46px;height:38px;border:2px solid;border-radius:10px;display:flex;align-items:flex-end;gap:3px;padding:4px;flex:none}
+.theme-swatch i{display:block;width:13px;height:13px;border-radius:4px}
+.msg-delete{float:right;margin-left:8px;opacity:.45;font-size:1rem}
+.msg-delete:hover{opacity:1}
+body[data-app-theme="pink"] .sidebar,body[data-app-theme="pink"] .chat{background:var(--bg)}
+@media(max-width:420px){.app-theme-grid{grid-template-columns:1fr}}

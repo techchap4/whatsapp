@@ -302,11 +302,12 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && ac
 /* ---------------- rendering: shell ---------------- */
 function renderAll() {
   $('me-avatar').innerHTML = avatar(profiles[me.id], 'sm');
-  renderList(); renderStatusPane(); renderProfilePane(); updateTitle();
+  renderList(); renderStatusPane(); renderProfilePane(); renderAppThemeSettings(); updateTitle();
 }
 document.querySelectorAll('.tabs button').forEach((b) => (b.onclick = () => switchTab(b.dataset.tab)));
 function switchTab(t) {
   currentTab = t;
+  if (t === 'settings' && typeof renderAppThemeSettings === 'function') renderAppThemeSettings();
   document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === t));
   $('chat-search').classList.toggle('hidden', t !== 'chats');
   ['chats', 'status', 'profile', 'settings'].forEach((x) => $('pane-' + x).classList.toggle('hidden', x !== t));
@@ -579,7 +580,8 @@ function msgHtml(m, mine, tick) {
     const v = callLabel(cl, mine);
     return `<div class="bubble callmsg ${side}${v.missed ? ' missed' : ''}" data-call="${cl.kind}" title="Tap to call back"><span class="ci">${cl.kind === 'video' ? '📹' : '📞'}</span><div class="t"><b>${v.title}</b><small>${v.sub}</small></div><span class="meta">${timeStr(m.created_at)}</span></div>`;
   }
-  if (!m.media_url) return `<div class="bubble ${side}">${esc(m.content)}${meta}</div>`;
+  const deleteControl = mine && !cl ? `<button class="msg-delete" type="button" data-delete-message="${esc(m.id)}" title="Delete for everyone" aria-label="Delete message">⋯</button>` : '';
+  if (!m.media_url) return `<div class="bubble ${side}">${esc(m.content)}${meta}${deleteControl}</div>`;
   const u = esc(m.media_url);
   let media;
   if (m.media_type === 'image') media = `<a href="${u}" target="_blank" rel="noopener"><img src="${u}" loading="lazy" alt="Photo"></a>`;
@@ -1038,5 +1040,69 @@ async function closeCallNotif() {
   try { const reg = swReg || (await getSw()); (await reg.getNotifications({ tag: 'call' })).forEach((n) => n.close()); } catch (e) {}
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) closeCallNotif(); });
+
+
+/* ===== Added features: app-wide themes, silent message deletion, groups ===== */
+const APP_THEMES = [
+  {id:'classic',name:'Classic Green',vars:['#ffffff','#f0f2f5','#111b21','#1daa61']},
+  {id:'dark',name:'Dark',vars:['#111b21','#202c33','#e9edef','#25d366']},
+  {id:'pink',name:'Pink WhatsApp',vars:['#fff3f8','#f9dce9','#49283a','#e66ca5']},
+  {id:'pink-bloom',name:'Pink Bloom',vars:['#fff7fb','#f3d5e6','#402a3a','#d96aa7']},
+  {id:'ocean',name:'Ocean Blue',vars:['#f0f8ff','#dceefa','#123247','#258cc7']},
+  {id:'lavender',name:'Lavender',vars:['#f7f2ff','#e8def8','#30234b','#8d6bd1']},
+  {id:'sunset',name:'Sunset',vars:['#fff4e9','#ffe0c8','#4a2a1c','#e9844b']}
+];
+function applyAppTheme(id) {
+  const t = APP_THEMES.find(x=>x.id===id) || APP_THEMES[0];
+  const r=document.documentElement;
+  r.style.setProperty('--bg',t.vars[0]); r.style.setProperty('--surface',t.vars[1]);
+  r.style.setProperty('--ink',t.vars[2]); r.style.setProperty('--green',t.vars[3]);
+  r.style.setProperty('--green-soft',t.vars[1]); r.style.setProperty('--green-ink',t.vars[2]);
+  r.style.setProperty('--line',t.id==='dark'?'#2c3a40':'#eadfe5');
+  document.body.dataset.appTheme=t.id;
+  const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.content=t.vars[3];
+  localStorage.setItem('chatapp-app-theme',t.id);
+}
+function renderAppThemeSettings() {
+  const pane=$('pane-settings'); if(!pane) return;
+  const current=localStorage.getItem('chatapp-app-theme')||'classic';
+  pane.innerHTML = `<div class="profile settings-added">
+    <h2 style="margin:0">Settings</h2>
+    <section class="setting-block"><h3>🎨 App theme</h3><p>Changes the colours across the entire app.</p>
+    <div class="app-theme-grid">${APP_THEMES.map(t=>`<button type="button" class="app-theme-option ${t.id===current?'selected':''}" data-app-theme="${t.id}">
+      <span class="theme-swatch" style="background:${t.vars[0]};border-color:${t.vars[3]}"><i style="background:${t.vars[1]}"></i><i style="background:${t.vars[3]}"></i></span><b>${t.name}</b>${t.id==='pink'?' <small>Featured</small>':''}</button>`).join('')}</div></section>
+    <section class="setting-block"><h3>💬 Chat theme</h3><p>Chat themes change the message conversation background and bubbles only. Open a conversation and tap 🎨 in its header.</p></section>
+    <section class="setting-block"><h3>👥 Groups</h3><p>Create group conversations, manage members and use group calling after applying the group database setup.</p><button class="primary" type="button" id="open-groups">Create a group</button><p id="group-settings-msg" class="auth-msg"></p></section>
+    <section class="setting-block"><h3>🗑️ Delete messages</h3><p>Use the message menu on your own message to delete it. “Delete for everyone” removes the message without sending a system announcement; database permissions must allow it.</p></section>
+  </div>`;
+  pane.querySelectorAll('[data-app-theme]').forEach(b=>b.onclick=()=>{applyAppTheme(b.dataset.appTheme);renderAppThemeSettings();});
+  const gb=$('open-groups'); if(gb) gb.onclick=()=>createGroupPrompt();
+}
+function createGroupPrompt(){
+  const name=prompt('Group name:'); if(!name || !name.trim()) return;
+  const description=prompt('Group description (optional):')||'';
+  createGroupRecord(name.trim(),description.trim());
+}
+async function createGroupRecord(name,description){
+  const msg=$('group-settings-msg'); if(msg) msg.textContent='Creating group…';
+  try {
+    const {data,error}=await sb.rpc('create_chat_group',{p_name:name,p_description:description});
+    if(error) throw error;
+    if(msg) msg.textContent='Group created. Refresh the app to see it in your group list.';
+    alert('Group created successfully.');
+  } catch(e) {
+    if(msg) msg.textContent='Group setup is not installed yet. Run group_features.sql in Supabase SQL Editor. Details: '+e.message;
+  }
+}
+document.addEventListener('DOMContentLoaded',()=>applyAppTheme(localStorage.getItem('chatapp-app-theme')||'classic'));
+
+document.addEventListener('click', async (e)=>{
+  const b=e.target.closest('[data-delete-message]'); if(!b) return;
+  const id=b.dataset.deleteMessage;
+  if(!confirm('Delete this message for everyone? This will not send an announcement.')) return;
+  const {error}=await sb.from('messages').delete().eq('id',id).eq('sender_id',me.id);
+  if(error){alert('Could not delete message. Check the messages DELETE policy in Supabase: '+error.message);return;}
+  messages=messages.filter(m=>String(m.id)!==String(id)); renderMessages(false); renderList();
+});
 
 setMode('login');
