@@ -6,12 +6,12 @@
   <meta name="theme-color" content="#e66ca5">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="ChatApp">
+  <meta name="apple-mobile-web-app-title" content="Rada">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="application-name" content="ChatApp">
+  <meta name="application-name" content="Rada">
   <meta name="format-detection" content="telephone=no">
-  <meta name="description" content="ChatApp: chat, status, voice and video calls.">
-  <title>ChatApp</title>
+  <meta name="description" content="Rada: chat, status, voice and video calls.">
+  <title>Rada</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -25,7 +25,7 @@
 <section id="auth" class="hidden">
   <div class="auth-card">
     <div class="logo">💬</div>
-    <h1>ChatApp</h1>
+    <h1>Rada</h1>
     <div class="auth-tabs" id="auth-tabs">
       <button id="tab-login" class="active" type="button">Log in</button>
       <button id="tab-signup" type="button">Sign up</button>
@@ -54,10 +54,34 @@
       <button id="auth-submit" class="primary" type="submit">Log in</button>
     </form>
 
-    <!-- shown only in a normal browser tab, hidden once installed -->
-    <button id="install-auth" class="install-pill hidden" type="button">⬇&nbsp; Install ChatApp</button>
+    <!-- Forgot password (shown only on the Log in tab; logic lives in features.js) -->
+    <button id="forgot-link" class="g-link" type="button">Forgot password?</button>
+    <form id="reset-form" autocomplete="off" style="display:none">
+      <p class="otp-help" id="rs-help">Enter your account email and we will send you a code to reset your password.</p>
+      <label>Email
+        <input id="rs-email" type="email" required placeholder="you@example.com" autocomplete="email">
+      </label>
+      <div id="rs-step2" style="display:none">
+        <label>Code from the email
+          <input id="rs-code" type="text" inputmode="numeric" maxlength="10" autocomplete="one-time-code" placeholder="00000000">
+        </label>
+        <label>New password
+          <input id="rs-pw" type="password" minlength="6" placeholder="At least 6 characters" autocomplete="new-password">
+        </label>
+        <label>Confirm new password
+          <input id="rs-pw2" type="password" placeholder="Type it again" autocomplete="new-password">
+        </label>
+      </div>
+      <p id="rs-msg" class="auth-msg"></p>
+      <button id="rs-go" class="primary" type="submit">Send code</button>
+      <div class="otp-links">
+        <button id="rs-resend" type="button" style="display:none">Resend code</button>
+        <button id="rs-back" type="button">Back to log in</button>
+      </div>
+    </form>
 
-    <!-- 8-digit email code step -->
+    <button id="install-auth" class="install-pill hidden" type="button">⬇&nbsp; Install Rada</button>
+
     <form id="otp-form" class="hidden" autocomplete="off">
       <p class="otp-help">We sent an 8-digit code to <b id="otp-email"></b>. Enter it to verify your account.</p>
       <input id="f-otp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" placeholder="00000000" required>
@@ -77,20 +101,23 @@
     <header class="sb-head">
       <div id="me-avatar" class="clickable" title="My profile"></div>
       <div class="sb-actions">
-        <button id="btn-install" class="hidden" type="button" title="Install app" aria-label="Install app">⬇</button>
-        <button id="btn-new" title="New chat">＋</button>
-        <button id="btn-logout" title="Log out">⏻</button>
+        <button id="btn-cam-status" type="button" title="Camera" aria-label="Camera">
+          <svg class="so" viewBox="0 0 24 24"><path d="M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4H9z"/><circle cx="12" cy="13" r="3.6"/></svg>
+        </button>
+        <button id="btn-topmore" type="button" title="More options" aria-label="More options">
+          <svg class="fl" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+        </button>
+        <div id="top-menu" class="pop hidden">
+          <button type="button" data-go="group">New group</button>
+          <button type="button" data-go="profile">Profile</button>
+          <button type="button" data-go="settings">Settings</button>
+          <button id="btn-install" class="hidden" type="button">Install app</button>
+          <button id="btn-logout" type="button">Log out</button>
+        </div>
       </div>
     </header>
 
-    <div id="chat-search" class="search"><input id="search" type="search" placeholder="Search chats"></div>
-
-    <nav class="tabs">
-      <button data-tab="chats" class="active">Chats <span id="unread-total" class="badge hidden"></span></button>
-      <button data-tab="status">Status</button>
-      <button data-tab="profile">Profile</button>
-      <button data-tab="settings">Settings</button>
-    </nav>
+    <div id="chat-search" class="search"><input id="search" type="search" placeholder="Search"></div>
 
     <div id="pane-chats" class="pane">
       <div id="chat-list"></div>
@@ -98,35 +125,94 @@
     <div id="pane-status" class="pane hidden"></div>
     <div id="pane-profile" class="pane hidden"></div>
     <div id="pane-settings" class="pane hidden"></div>
+    <div id="pane-calls" class="pane hidden"></div>
+    <div id="pane-communities" class="pane hidden">
+      <div class="comm">
+        <div class="comm-ic">👥</div>
+        <h3>Stay connected with a group</h3>
+        <p>Create a group to chat with many people at once.</p>
+        <button id="comm-new" class="primary" type="button">New group</button>
+      </div>
+    </div>
+
+    <button id="btn-new" type="button" title="New chat" aria-label="New chat">
+      <svg viewBox="0 0 24 24"><path d="M4 3h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 1-2z"/><path class="fab-plus" d="M11 6.5h2V10h3.5v2H13v3.5h-2V12H7.5v-2H11z"/></svg>
+    </button>
+
+    <nav class="tabs">
+      <button data-tab="chats" class="active">
+        <span class="ni"><svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg></span>
+        <span>Chats</span><span id="unread-total" class="badge hidden"></span>
+      </button>
+      <button data-tab="status">
+        <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 2"/><circle cx="12" cy="12" r="4"/></svg></span>
+        <span>Updates</span>
+      </button>
+      <button data-tab="communities">
+        <span class="ni"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></span>
+        <span>Communities</span>
+      </button>
+      <button data-tab="calls">
+        <span class="ni"><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></span>
+        <span>Calls</span>
+      </button>
+    </nav>
   </aside>
 
   <main class="chat">
     <div id="empty">
       <div class="empty-icon">💬</div>
-      <h2>ChatApp</h2>
-      <p>Pick a chat on the left, or tap ＋ to message someone new.</p>
+      <h2>Rada</h2>
+      <p>Pick a chat on the left, or tap the green button to message someone new.</p>
     </div>
 
     <div id="conv" class="hidden">
       <header class="conv-head">
-        <button id="btn-back" class="back" title="Back">←</button>
+        <button id="btn-back" class="back" title="Back" aria-label="Back">
+          <svg class="fl" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </button>
         <div id="conv-avatar"></div>
         <div class="conv-info">
           <div id="conv-name" class="name"></div>
           <div id="conv-sub" class="sub"></div>
         </div>
         <div class="conv-actions">
-          <button id="btn-vcall" class="icon-btn" type="button" title="Video call" aria-label="Video call">📹</button>
-          <button id="btn-acall" class="icon-btn" type="button" title="Voice call" aria-label="Voice call">📞</button>
-          <button id="btn-theme" class="icon-btn" title="Chat theme">🎨</button>
+          <button id="btn-vcall" class="icon-btn" type="button" title="Video call" aria-label="Video call">
+            <svg class="so" viewBox="0 0 24 24"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.5 21 7.5v9l-5.5-3z"/></svg>
+          </button>
+          <button id="btn-acall" class="icon-btn" type="button" title="Voice call" aria-label="Voice call">
+            <svg class="so" viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+          </button>
+          <button id="btn-more" class="icon-btn" type="button" title="More options" aria-label="More options">
+            <svg class="fl" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+          </button>
+          <button id="btn-theme" class="hidden" type="button" tabindex="-1" aria-hidden="true"></button>
+          <div id="chat-menu" class="pop hidden"></div>
         </div>
       </header>
       <div id="messages"></div>
+      <div id="emoji-panel" class="hidden"></div>
       <form id="composer">
-        <label class="icon-btn" title="Send photo, video, audio or music">📎<input id="attach-file" type="file" accept="image/*,video/*,audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac" multiple hidden></label>
-        <textarea id="msg-input" rows="1" placeholder="Type a message" maxlength="4000"></textarea>
-        <button id="btn-rec" class="icon-btn" type="button" title="Record a voice note">🎤</button>
-        <button class="send" type="submit" title="Send">➤</button>
+        <div class="pill">
+          <button id="btn-emoji" class="icon-btn" type="button" title="Emoji" aria-label="Emoji">
+            <svg class="so" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.2" fill="currentColor" stroke="none"/><path d="M8 14.5c1 1.5 2.3 2.2 4 2.2s3-.7 4-2.2"/></svg>
+          </button>
+          <textarea id="msg-input" rows="1" placeholder="Message" maxlength="4000"></textarea>
+          <label class="icon-btn" title="Attach photo, video, audio or music">
+            <svg class="fl" viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
+            <input id="attach-file" type="file" accept="image/*,video/*,audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac" multiple hidden>
+          </label>
+          <label class="icon-btn" title="Camera">
+            <svg class="so" viewBox="0 0 24 24"><path d="M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4H9z"/><circle cx="12" cy="13" r="3.6"/></svg>
+            <input id="cam-file" type="file" accept="image/*" capture="environment" hidden>
+          </label>
+        </div>
+        <button id="btn-rec" class="mic" type="button" title="Record a voice note" aria-label="Record a voice note">
+          <svg class="fl" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+        </button>
+        <button class="send" type="submit" title="Send" aria-label="Send">
+          <svg class="fl" viewBox="0 0 24 24"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
       </form>
       <div id="rec-bar" class="hidden">
         <button id="rec-cancel" class="icon-btn" type="button" title="Cancel">🗑</button>
@@ -140,14 +226,14 @@
 <!-- ============ INSTALL (browser only) ============ -->
 <div id="install-banner" class="hidden" role="region" aria-label="Install app">
   <img src="icon-192.png" alt="" width="40" height="40">
-  <div class="ib-text"><b>Install ChatApp</b><span>Full screen, faster, with call alerts</span></div>
+  <div class="ib-text"><b>Install Rada</b><span>Full screen, faster, with call alerts</span></div>
   <button id="install-banner-btn" class="ib-go" type="button">Install</button>
   <button id="install-banner-x" class="ib-x" type="button" aria-label="Dismiss">✕</button>
 </div>
 
 <div id="modal-install" class="modal hidden">
   <div class="modal-card">
-    <header><button class="close" type="button" data-close-install>✕</button><h3>Install ChatApp</h3></header>
+    <header><button class="close" type="button" data-close-install>✕</button><h3>Install Rada</h3></header>
     <div class="install-help"><div id="install-help-body"></div></div>
   </div>
 </div>
@@ -226,6 +312,8 @@
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script src="extras.js"></script>
+<script src="menu.js"></script>
+<script src="features.js"></script>
 <script src="pwa.js"></script>
 </body>
 </html>

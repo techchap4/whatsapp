@@ -1,5 +1,5 @@
 /* ============================================================
-   ChatApp - WhatsApp-style chat on Supabase
+   Rada - WhatsApp-style chat on Supabase
    ============================================================ */
 // persistSession keeps the login in the phone's storage, so users stay signed in (like WhatsApp)
 const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
@@ -195,7 +195,7 @@ function stop() {
   if (realtimeCh) sb.removeChannel(realtimeCh);
   if (presenceCh) sb.removeChannel(presenceCh);
   realtimeCh = presenceCh = null;
-  document.title = 'ChatApp';
+  document.title = 'Rada';
   $('app').classList.add('hidden');
   $('app').classList.remove('chat-open');
   $('conv').classList.add('hidden'); $('empty').classList.remove('hidden');
@@ -287,7 +287,7 @@ function unreadCount(from) {
 }
 function updateTitle() {
   const n = unreadCount();
-  document.title = n ? `(${n}) ChatApp` : 'ChatApp';
+  document.title = n ? `(${n}) Rada` : 'Rada';
   const b = $('unread-total'); b.textContent = n; b.classList.toggle('hidden', !n);
 }
 async function markRead(otherId) {

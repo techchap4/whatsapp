@@ -1,9 +1,10 @@
-/* ChatApp service worker:
+/* Rada service worker:
    1) makes the app installable + opens instantly / offline shell
    2) shows "incoming call" notifications when the app is closed or in the background */
-const CACHE = 'chatapp-shell-v2';
-const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'config.js', 'pwa.js', 'manifest.json',
-  'icon.svg', 'icon-192.png', 'icon-512.png'];
+const CACHE = 'rada-shell-v4';
+const SHELL = ['./', 'index.html', 'style.css', 'extras.css', 'app.js', 'extras.js', 'menu.js', 'features.js',
+  'config.js', 'pwa.js', 'manifest.json',
+  'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
@@ -47,7 +48,7 @@ self.addEventListener('push', (event) => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (wins.some((w) => w.visibilityState === 'visible')) return;   // app is open: it rings by itself
     const ring = d.type === 'invite';
-    await self.registration.showNotification(d.title || 'ChatApp', {
+    await self.registration.showNotification(d.title || 'Rada', {
       body: d.body || '',
       tag: 'call',
       renotify: true,

@@ -1,8 +1,4 @@
-/* =========================================================
-   ChatApp – new WhatsApp look (green logo, search pill, FAB,
-   bottom nav with pill highlight). Replaces your old style.css.
-   Written against your real index.html + app.js class names.
-   ========================================================= */
+/* Rada: WhatsApp layout (header + chips + FAB + bottom nav + chat header + composer) */
 
 :root{
   --green:#1daa61;
@@ -17,7 +13,7 @@
   --danger:#e53935;
   --frame:#e9f2d0;
   --shadow:0 2px 8px rgba(11,20,26,.2);
-  --nav-h:76px;
+  --nav-h:72px;
 }
 @media (prefers-color-scheme:dark){
   :root{
@@ -44,6 +40,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--green);outline-offset:2px}
 img{display:block}
+
+/* icons */
+.icon-btn svg,.sb-actions svg,.back svg,.tabs svg,.mic svg,.send svg,#btn-new svg,.call-ic svg{width:24px;height:24px;flex:none}
+svg.so{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+svg.fl{fill:currentColor}
 
 /* ---------- Splash + auth ---------- */
 #splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg)}
@@ -83,7 +84,6 @@ img{display:block}
   #app{box-shadow:var(--shadow)}
   #btn-back{display:none!important}
 }
-/* phone: list OR conversation (app.js toggles .chat-open) */
 @media (max-width:760px){
   #app{grid-template-columns:1fr}
   .chat{display:none}
@@ -92,61 +92,73 @@ img{display:block}
 }
 
 /* ---------- Sidebar header ---------- */
-.sb-head{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 4px 16px;gap:10px}
-.sb-head::before{content:"ChatApp";order:1;margin-right:auto;font-size:1.65rem;font-weight:700;letter-spacing:-.4px;color:var(--green)}
-#me-avatar{display:none}  /* delete this line to show your avatar in the header */
-.sb-actions{order:2;display:flex;align-items:center;gap:2px}
-.sb-actions button{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:1.2rem;text-align:center}
-.sb-actions button:active{background:var(--surface)}
+.sb-head{order:1;display:flex;align-items:center;justify-content:space-between;padding:12px 8px 4px 18px;gap:10px}
+.sb-head::before{content:"Rada";margin-right:auto;font-size:1.65rem;font-weight:700;letter-spacing:-.4px;color:var(--green)}
+@media (prefers-color-scheme:dark){.sb-head::before{color:var(--ink)}}
+#me-avatar{display:none}
+.sb-actions{position:relative;display:flex;align-items:center;gap:2px}
+.sb-actions>button{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;text-align:center}
+.sb-actions>button:active{background:var(--surface)}
+
+/* floating new-chat button */
 #btn-new{
-  position:absolute;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));
-  width:60px;height:60px;border-radius:18px;font-size:1.9rem;font-weight:300;
-  background:var(--green-soft);color:var(--green-ink);box-shadow:var(--shadow);z-index:5;
+  position:absolute;right:18px;bottom:calc(var(--nav-h) + 18px + env(safe-area-inset-bottom,0px));
+  width:60px;height:60px;border-radius:18px;display:grid;place-items:center;
+  background:var(--green);color:#08140d;box-shadow:var(--shadow);z-index:5;
 }
-#btn-new:active{background:var(--green-soft);transform:scale(.96)}
+#btn-new svg{width:28px;height:28px;fill:currentColor}
+#btn-new .fab-plus{fill:var(--green)}
+#btn-new:active{transform:scale(.96)}
 .sidebar:has(#pane-chats.hidden) #btn-new{display:none}
 
-/* ---------- Top navigation (.tabs) ---------- */
+/* ---------- Bottom navigation ---------- */
 .tabs{
-  order:3;display:flex;justify-content:flex-end;align-items:center;gap:12px;
-  padding:0 16px 8px;background:var(--bg);
+  order:5;display:flex;justify-content:space-around;align-items:flex-start;
+  padding:8px 4px calc(8px + env(safe-area-inset-bottom,0px));
+  background:var(--bg);border-top:1px solid var(--line);
 }
 .tabs button{
-  position:relative;flex:none;display:flex;align-items:center;gap:4px;
-  font-size:.74rem;font-weight:500;color:var(--mute);text-align:center;
+  position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  font-size:.74rem;font-weight:500;color:var(--ink);text-align:center;
 }
-.tabs button::before{
-  width:auto;height:auto;display:grid;place-items:center;
-  font-size:1rem;filter:grayscale(1);opacity:.75;transition:background .2s;
-}
-.tabs button[data-tab=chats]::before{content:"💬"}
-.tabs button[data-tab=status]::before{content:"◔"}
-.tabs button[data-tab=profile]::before{content:"👤"}
-.tabs button[data-tab=settings]::before{content:"⚙"}
-.tabs button.active{color:var(--ink);font-weight:700}
-.tabs button.active::before{filter:none;opacity:1}
-.tabs .badge{position:absolute;top:-8px;right:-12px}
+.tabs .ni{width:64px;height:32px;border-radius:16px;display:grid;place-items:center;color:var(--mute);transition:background .2s}
+.tabs .ni svg{fill:currentColor}
+.tabs button.active{font-weight:700}
+.tabs button.active .ni{background:var(--green-soft);color:var(--green-ink)}
+.tabs .badge{position:absolute;top:-4px;left:calc(50% + 6px)}
 .badge{
   flex:none;min-width:20px;height:20px;padding:0 6px;border-radius:10px;
   background:var(--green);color:#fff;font-size:.72rem;font-weight:700;
   display:inline-grid;place-items:center;
 }
 
-/* ---------- Panes + search ---------- */
-.pane{order:4;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:16px}
+/* ---------- Panes + search + chips ---------- */
+.pane{order:4;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:96px}
 .sidebar>.search{order:2}
 .search{padding:8px 16px 10px}
 .search input{
   width:100%;height:48px;border:0;outline:0;border-radius:28px;color:var(--ink);font-size:1rem;
   padding:0 18px 0 52px;background-color:var(--surface);
-  background-image:conic-gradient(from 200deg,#1e6bff,#7b3cff,#ff4fa3,#1ec8ff,#1e6bff);
-  background-size:20px 20px;background-repeat:no-repeat;background-position:18px center;
-  -webkit-mask:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23888'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E");
+  background-size:22px 22px;background-repeat:no-repeat;background-position:18px center;
 }
 .search input::placeholder{color:var(--mute)}
 .search input::-webkit-search-cancel-button{display:none}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 0 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{
+  flex:none;padding:7px 15px;border-radius:18px;border:1px solid var(--line);
+  color:var(--mute);font-size:.92rem;font-weight:500;text-align:center;
+}
+.chips button.active{background:var(--green-soft);border-color:transparent;color:var(--green-ink);font-weight:700}
 .empty-note{padding:40px 24px;text-align:center;color:var(--mute)}
 .section-title{padding:14px 16px 6px;font-size:.84rem;font-weight:600;color:var(--mute)}
+
+/* communities */
+.comm{display:grid;justify-items:center;gap:10px;padding:56px 28px;text-align:center}
+.comm-ic{font-size:3.4rem}
+.comm h3{margin:0}
+.comm p{margin:0 0 8px;color:var(--mute)}
 
 /* ---------- Avatars ---------- */
 .avatar{
@@ -155,25 +167,28 @@ img{display:block}
 }
 .avatar.sm{width:40px;height:40px;font-size:1rem}
 .avatar.xl{width:120px;height:120px;font-size:2.6rem}
+.avatar.has-status{box-shadow:0 0 0 2px var(--bg),0 0 0 4.5px var(--green);margin:3px}
 #conv-avatar,#sv-avatar,#me-avatar,#call-avatar{display:grid;flex:none}
 .vbadge{width:1.05em;height:1.05em;margin-left:.25em;vertical-align:-.15em;fill:var(--green)}
 
-/* ---------- Rows (.item): chats, contacts, status, viewers ---------- */
+/* ---------- Rows ---------- */
 .item{display:flex;align-items:center;gap:14px;width:100%;padding:9px 16px;cursor:pointer;text-align:left}
 .item:hover,.item:active,.item.active{background:var(--surface)}
 .item .body{flex:1;min-width:0}
 .item .top,.item .bottom{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .item .bottom{margin-top:2px}
 .item .name{display:flex;align-items:center;font-size:1.06rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .name.missed{color:var(--danger)}
 .item .time{flex:none;font-size:.78rem;color:var(--mute)}
 .item .time.unread{color:var(--green);font-weight:600}
 .item .preview{display:flex;align-items:center;gap:4px;min-width:0;font-size:.93rem;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.item .time.unread ~ *,.item:has(.time.unread) .preview{color:var(--ink)}
+.item .preview.missed{color:var(--danger)}
+.item:has(.time.unread) .preview{color:var(--ink)}
+.call-ic{flex:none;color:var(--green)}
 
-/* status ring around an avatar */
 .ring{flex:none;padding:3px;border-radius:50%;border:2.5px solid var(--green);display:grid;place-items:center}
 .ring.none{border-color:var(--line);border-style:dashed}
-.ring .avatar{width:50px;height:50px}
+.ring .avatar{width:50px;height:50px;margin:0;box-shadow:none}
 .status-actions{display:flex;gap:10px;padding:8px 16px}
 .status-actions button{flex:1;padding:10px 12px;border-radius:24px;background:var(--surface);font-weight:600;text-align:center}
 .status-actions button:active{background:var(--green-soft)}
@@ -211,16 +226,16 @@ img{display:block}
 }
 .conv-head{
   display:flex;align-items:center;gap:10px;
-  padding:8px 6px 8px 4px;padding-top:calc(8px + env(safe-area-inset-top,0px));
+  padding:8px 4px 8px 4px;padding-top:calc(8px + env(safe-area-inset-top,0px));
   background:var(--bg);border-bottom:1px solid var(--line);color:var(--ink);
 }
-.back{width:40px;height:40px;border-radius:50%;font-size:1.3rem;display:grid;place-items:center;text-align:center}
+.back{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;text-align:center;flex:none}
 .back:active{background:var(--surface)}
 .conv-info{flex:1;min-width:0}
-.conv-info .name{display:flex;align-items:center;font-size:1.02rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-info .name{display:flex;align-items:center;font-size:1.1rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .conv-info .sub{font-size:.78rem;color:var(--mute)}
-.conv-actions{display:flex;align-items:center}
-.icon-btn{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:1.15rem;cursor:pointer;text-align:center}
+.conv-actions{position:relative;display:flex;align-items:center}
+.icon-btn{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;cursor:pointer;text-align:center}
 .icon-btn:active{background:var(--surface)}
 
 #messages{
@@ -251,17 +266,44 @@ img{display:block}
 .bubble.callmsg.missed b{color:var(--danger)}
 .bubble.callmsg .meta{float:none;margin:0}
 
-#composer{display:flex;align-items:flex-end;gap:6px;padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px))}
-#composer>.icon-btn{background:var(--bg);width:44px;height:44px;margin-bottom:2px}
+/* ---------- Composer (pill + mic/send) ---------- */
+#composer{display:flex;align-items:flex-end;gap:8px;padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px))}
+#composer .pill{flex:1;min-width:0;display:flex;align-items:flex-end;background:var(--bg);border-radius:26px;padding:0 4px}
+#composer .pill .icon-btn{width:42px;height:48px;border-radius:50%;color:var(--mute);flex:none}
 #msg-input{
   flex:1;min-width:0;resize:none;max-height:120px;border:0;outline:0;
-  padding:13px 18px;border-radius:26px;background:var(--bg);color:var(--ink);font-size:1rem;
+  padding:13px 4px;background:transparent;color:var(--ink);font-size:1rem;line-height:1.35;
 }
-.send{flex:none;width:48px;height:48px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-size:1.1rem;text-align:center}
+.mic,.send{flex:none;width:48px;height:48px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-size:1.1rem;text-align:center}
+@media (prefers-color-scheme:dark){.mic,.send{color:#0b141a}}
+#composer .send{display:none}
+#composer.typing .send{display:grid}
+#composer.typing #btn-rec{display:none}
+
+#emoji-panel{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;padding:8px;background:var(--bg);border-top:1px solid var(--line);max-height:190px;overflow-y:auto}
+#emoji-panel button{font-size:1.45rem;padding:6px;text-align:center;border-radius:8px}
+#emoji-panel button:active{background:var(--surface)}
+
 #rec-bar{display:flex;align-items:center;gap:12px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px))}
 #rec-time{flex:1;font-variant-numeric:tabular-nums;color:var(--bub-text)}
 .rec-dot{width:12px;height:12px;border-radius:50%;background:var(--danger);animation:blink 1s infinite}
 @keyframes blink{50%{opacity:.25}}
+
+/* ---------- Pop-up menus (top ⋮ and chat ⋮) ---------- */
+.pop{position:absolute;right:6px;top:100%;z-index:80;min-width:230px;background:var(--bg);color:var(--ink);
+  border-radius:14px;box-shadow:var(--shadow);padding:6px 0;border:1px solid var(--line)}
+.pop button{display:block;width:100%;padding:13px 20px;font-size:1rem}
+.pop button:active,.pop button:hover{background:var(--surface)}
+.pop button.sep{border-bottom:1px solid var(--line)}
+
+#chat-find{display:flex;gap:8px;align-items:center;padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--line)}
+#chat-find input{flex:1;height:40px;border:0;outline:0;border-radius:22px;padding:0 16px;background:var(--surface);color:var(--ink)}
+.sheet-body{overflow-y:auto;padding-bottom:12px}
+.media-tabs{display:flex;border-bottom:1px solid var(--line)}
+.media-tabs button{flex:1;padding:12px;text-align:center;color:var(--mute);font-weight:600}
+.media-tabs button.active{color:var(--green);box-shadow:inset 0 -2px var(--green)}
+.media-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px}
+.media-grid img,.media-grid video{width:100%;aspect-ratio:1;object-fit:cover}
 
 /* ---------- Install banner ---------- */
 #install-banner{
@@ -286,7 +328,6 @@ img{display:block}
 #contact-list,#theme-list,.install-help{overflow-y:auto;padding-bottom:12px}
 .install-help{padding:16px}
 
-/* chat theme picker */
 .theme-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;padding:14px}
 .theme{
   position:relative;aspect-ratio:1;border-radius:14px;border:2px solid var(--line);
@@ -298,7 +339,6 @@ img{display:block}
 .theme.dark b{color:#fff}
 .theme.sel{border-color:var(--green);box-shadow:0 0 0 2px var(--green)}
 
-/* status composer */
 .status-compose{padding:14px;display:grid;gap:12px;overflow-y:auto}
 .status-preview{position:relative;min-height:240px;border-radius:16px;overflow:hidden;display:grid;place-items:center;padding:16px}
 .status-preview textarea{width:100%;min-height:200px;border:0;outline:0;resize:none;background:transparent;color:#fff;text-align:center;font-size:1.5rem;font-weight:500}

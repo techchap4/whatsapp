@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Rada">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#17c3a0"/>
+      <stop offset="1" stop-color="#008069"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <path d="M192 108H336A64 64 0 0 1 400 172V288A64 64 0 0 1 336 352H214L128 420V172A64 64 0 0 1 192 108Z" fill="#ffffff"/>
+  <path d="M228 170V300M228 170H274A44 44 0 0 1 274 258H228M276 258L314 300" fill="none" stroke="#008069" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="420" cy="104" r="14" fill="#ffffff" opacity=".9"/>
+  <circle cx="452" cy="144" r="8" fill="#ffffff" opacity=".6"/>
+</svg>

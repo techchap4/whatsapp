@@ -1,4 +1,4 @@
-/* ChatApp PWA: install button (browser only), service worker, phone-friendly behaviour */
+/* Rada PWA: install button (browser only), service worker, phone-friendly behaviour */
 (() => {
   const $ = (id) => document.getElementById(id);
   const ua = navigator.userAgent || '';
@@ -50,14 +50,14 @@
     let s = '';
     if (!secure) s += '<p class="warn">Installing needs a secure (https) address. Open the site with https:// first.</p>';
     if (inAppBrowser) {
-      s += '<ol><li>Tap the <b>⋮</b> or <b>•••</b> menu at the corner of this screen.</li><li>Choose <b>Open in browser</b> (Chrome on Android, Safari on iPhone).</li><li>Then tap <b>Install ChatApp</b> again.</li></ol>';
+      s += '<ol><li>Tap the <b>⋮</b> or <b>•••</b> menu at the corner of this screen.</li><li>Choose <b>Open in browser</b> (Chrome on Android, Safari on iPhone).</li><li>Then tap <b>Install Rada</b> again.</li></ol>';
     } else if (isIOS) {
       s += iosNotSafari ? '<p>On iPhone/iPad, apps can only be added from <b>Safari</b>. Open this page in Safari first.</p>' : '';
-      s += '<ol><li>Tap the <b>Share</b> button <span class="ic">⎋</span> (square with an arrow) in Safari.</li><li>Scroll down and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>. ChatApp now opens full screen from your home screen.</li></ol>';
+      s += '<ol><li>Tap the <b>Share</b> button <span class="ic">⎋</span> (square with an arrow) in Safari.</li><li>Scroll down and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>. Rada now opens full screen from your home screen.</li></ol>';
     } else if (isAndroid) {
       s += '<ol><li>Tap the browser menu <b>⋮</b> (top right).</li><li>Tap <b>Install app</b> (or <b>Add to Home screen</b>).</li><li>Confirm with <b>Install</b>.</li></ol>';
     } else {
-      s += '<ol><li>Look for the <b>install</b> icon <span class="ic">⊕</span> at the right end of the address bar, or open the browser menu.</li><li>Choose <b>Install ChatApp</b>.</li></ol>';
+      s += '<ol><li>Look for the <b>install</b> icon <span class="ic">⊕</span> at the right end of the address bar, or open the browser menu.</li><li>Choose <b>Install Rada</b>.</li></ol>';
     }
     return s;
   }

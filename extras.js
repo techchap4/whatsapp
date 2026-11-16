@@ -1,5 +1,5 @@
 /* ============================================================
-   ChatApp extras: settings, verification badge, update notifications,
+   Rada extras: settings, verification badge, update notifications,
    block / report, ban screen.  Loaded after app.js (shares its globals).
    Needs admin_setup.sql to have been run.
    ============================================================ */
@@ -276,7 +276,7 @@ function renderSettings() {
   const pane = $('pane-settings'), p = profiles[me.id], s = S(); if (!p) return;
   let h = '';
   if (settingsView === 'main') {
-    h = `<button class="item set-me" data-tab-go="profile" type="button">${avatar(p)}<div class="body"><div class="top"><span class="name">${esc(nameOf(p))}${vb(p)}</span></div><div class="bottom"><span class="preview">${esc(p.about || 'Hey there! I am using ChatApp')}</span></div></div></button>
+    h = `<button class="item set-me" data-tab-go="profile" type="button">${avatar(p)}<div class="body"><div class="top"><span class="name">${esc(nameOf(p))}${vb(p)}</span></div><div class="bottom"><span class="preview">${esc(p.about || 'Hey there! I am using Rada')}</span></div></div></button>
       ${sRow('account', '🔑', 'Account', 'Password, email, verification, delete account')}
       ${sRow('privacy', '🔒', 'Privacy', 'Last seen, profile photo, about, read receipts, blocked')}
       ${sRow('chats', '💬', 'Chats', 'Theme, font size, Enter key')}
@@ -321,7 +321,7 @@ function renderSettings() {
       setTimeout(async () => { try { const e = await navigator.storage.estimate(); const el = $('st-usage'); if (el) el.textContent = `This app uses about ${(e.usage / 1048576).toFixed(1)} MB on this device.`; } catch (x) {} }, 0);
     } else if (settingsView === 'help') {
       h += `<div class="set-form"><h4>Contact the admins</h4><textarea id="hp-text" rows="4" maxlength="600" placeholder="Describe your problem or idea"></textarea><button class="primary" data-act="feedback" type="button">Send</button><p id="set-msg" class="auth-msg"></p></div>
-        <div class="set-form"><h4>About</h4><p>ChatApp. Signed in as ${esc(me.email)}.</p></div>`;
+        <div class="set-form"><h4>About</h4><p>Rada. Signed in as ${esc(me.email)}.</p></div>`;
     }
   }
   pane.innerHTML = h;
@@ -340,7 +340,7 @@ function setMsg(t, ok) { const el = $('set-msg'); if (el) { el.textContent = t; 
     const a = act.dataset.act;
     if (a === 'logout') return $('btn-logout').click();
     if (a === 'share') {
-      const data = { title: 'ChatApp', text: 'Chat with me on ChatApp', url: location.origin + location.pathname.replace(/[^/]*$/, '') };
+      const data = { title: 'Rada', text: 'Chat with me on Rada', url: location.origin + location.pathname.replace(/[^/]*$/, '') };
       return navigator.share ? navigator.share(data).catch(() => {}) : navigator.clipboard.writeText(data.url).then(() => toast('Link copied'));
     }
     if (a === 'pw') {

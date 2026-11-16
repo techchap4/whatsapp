@@ -1,4 +1,4 @@
-/* ChatApp admin dashboard. Needs admin_setup.sql and your account flagged is_admin = true. */
+/* Rada admin dashboard. Needs admin_setup.sql and your account flagged is_admin = true. */
 const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
