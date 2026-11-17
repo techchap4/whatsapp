@@ -147,7 +147,7 @@ async function onNotif(n) {
   notifs.unshift(n); refreshBell(); playReceive(); toast((n.type === 'update' ? '⬆ ' : '🔔 ') + n.title);
   if (n.type === 'verification') { const { data } = await sb.from('profiles').select('*').eq('id', me.id).single(); if (data) { profiles[me.id] = data; renderAll(); } }
   if (S().notif.updates && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
-    try { const reg = await getSw(); const o = { body: n.body || '', icon: 'icon-192.png', tag: 'notif-' + n.id }; reg ? reg.showNotification(n.title, o) : new Notification(n.title, o); } catch (e) {}
+    try { const reg = await getSw(); const o = { body: n.body || '', icon: 'icon-maskable-512.png', tag: 'notif-' + n.id }; reg ? reg.showNotification(n.title, o) : new Notification(n.title, o); } catch (e) {}
   }
   if (!$('modal-notifs').classList.contains('hidden')) renderNotifs();
 }

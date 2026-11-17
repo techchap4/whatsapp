@@ -1033,7 +1033,7 @@ function pushCall(to, c, type) {
 }
 async function notifyCall(c) {
   if (!('Notification' in window) || Notification.permission !== 'granted' || !document.hidden) return;
-  const pr = profiles[c.peerId], opts = { body: `Incoming ${c.kind === 'video' ? 'video' : 'voice'} call`, tag: 'call', renotify: true, requireInteraction: true, vibrate: [500, 250, 500, 250, 500], icon: pr?.avatar_url || 'icon.svg' };
+  const pr = profiles[c.peerId], opts = { body: `Incoming ${c.kind === 'video' ? 'video' : 'voice'} call`, tag: 'call', renotify: true, requireInteraction: true, vibrate: [500, 250, 500, 250, 500], icon: pr?.avatar_url || 'icon-maskable-512.png' };
   try { const reg = await getSw(); if (reg) await reg.showNotification(nameOf(pr), opts); else new Notification(nameOf(pr), opts); } catch (e) {}
 }
 async function closeCallNotif() {

@@ -4,7 +4,7 @@
 const CACHE = 'rada-shell-v4';
 const SHELL = ['./', 'index.html', 'style.css', 'extras.css', 'app.js', 'extras.js', 'menu.js', 'features.js',
   'config.js', 'pwa.js', 'manifest.json',
-  'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
+  'icon.svg', 'icon-maskable-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
@@ -54,8 +54,8 @@ self.addEventListener('push', (event) => {
       renotify: true,
       requireInteraction: ring,
       vibrate: ring ? [500, 250, 500, 250, 500, 250, 500] : [200],
-      icon: 'icon-192.png',
-      badge: 'icon-192.png',
+      icon: 'icon-maskable-512.png',
+      badge: 'icon-maskable-512.png',
       data: d
     });
   })());
