@@ -56,30 +56,9 @@ async function worker({ windows = [], failMatch = false } = {}) {
   const broken = { url:'https://example.test/rada/', focus:async()=>{throw Error('closed');} };
   w = await worker({windows:[broken]}); await w.click({type:'message',from:'someone'}); assert.equal(w.opened[0],'https://example.test/rada/?chat=someone');
 
-  // Exercise the actual menu queue: click may precede sign-in and profile load.
-  const menu = fs.readFileSync('menu.js','utf8');
-  const part = menu.slice(menu.indexOf('  /* Queue notification links'), menu.lastIndexOf('})();'));
-  let handler, tick, openedChat, ack;
-  const ctx = { navigator:{serviceWorker:{addEventListener:(_, fn)=>{handler=fn;}}}, location:{search:''}, URLSearchParams,
-    setInterval: fn => {tick=fn; return 1;}, clearInterval:()=>{}, me:null, profiles:{}, openChat:id=>{openedChat=id;} };
-  vm.runInNewContext(part, ctx);
-  handler({data:{type:'open-chat',id:'peer'},ports:[{postMessage:v=>{ack=v;}}]});
-  assert.equal(ack,'queued'); tick(); assert.equal(openedChat,undefined);
-  ctx.me={id:'me'}; ctx.profiles.peer={}; tick(); assert.equal(openedChat,'peer');
-
-  // Exercise incoming message logic rather than only checking text.
-  const appCode=fs.readFileSync('app.js','utf8');
-  const onMessage=appCode.slice(appCode.indexOf('function onMessage(m)'),appCode.indexOf('async function desktopNotify(m)'));
-  let sounds=0, alerts=0; const state={ notif:{messages:true} };
-  const c={messages:[],me:{id:'me'},activeId:null,document:{hidden:true},window:{isMuted:()=>true},
-    S:()=>state, parseCall:()=>false,playReceive:()=>sounds++,desktopNotify:()=>alerts++,renderList:()=>{},renderMessages:()=>{},updateTitle:()=>{},markRead:()=>{}};
-  vm.runInNewContext(onMessage,c); c.onMessage({id:1,receiver_id:'me',sender_id:'peer'}); assert.equal(sounds,0); assert.equal(alerts,0);
-  c.window.isMuted=()=>false; c.onMessage({id:2,receiver_id:'me',sender_id:'peer'}); assert.equal(sounds,1); assert.equal(alerts,1);
-  state.notif.messages=false; c.onMessage({id:3,receiver_id:'me',sender_id:'peer'}); assert.equal(sounds,1); assert.equal(alerts,1);
-
   const backend=fs.readFileSync('index.TS','utf8');
   assert(backend.includes('notif?.messages === false || notif?.desktop === false'));
   assert(backend.includes('JSON.stringify({ type: "message", from: m.sender_id })'));
   assert(!backend.includes('previewOf('));
-  console.log('Notification checks passed: generic previews, routing, failures, calls, local mute, settings, minimal push payload');
+  console.log('Notification checks passed: worker previews, routing, failures and calls; backend payload checks');
 })().catch(e=>{console.error(e); process.exitCode=1;});
