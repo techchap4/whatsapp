@@ -50,9 +50,14 @@ async function worker({ windows = [], failMatch = false } = {}) {
   const app = { url:'https://example.test/rada/index.html', focus:async()=>{}, postMessage:(data, ports)=>{posted=data; ports[0].postMessage('queued');} };
   w = await worker({windows:[app]}); await w.click({type:'message',from:'someone'});
   assert.equal(posted.type,'open-chat'); assert.equal(posted.id,'someone'); assert.equal(w.opened.length,0);
-  let navigated;
-  const oldApp = { url:'https://example.test/rada/', focus:async()=>{}, postMessage:()=>{throw Error('old tab');}, navigate:async url=>{navigated=url; return true;} };
-  w = await worker({windows:[oldApp]}); await w.click({type:'message',from:'someone'}); assert.equal(navigated,'https://example.test/rada/?chat=someone');
+  let navigated = 0, focused = 0;
+  const oldApp = { url:'https://example.test/rada/', focus:async()=>{focused++;}, postMessage:()=>{}, navigate:async()=>{navigated++; return true;} };
+  // Old tabs do not acknowledge: keep drafts intact rather than navigating or opening a duplicate.
+  w = await worker({windows:[oldApp]}); await w.click({type:'message',from:'someone'});
+  assert.equal(focused,1); assert.equal(navigated,0); assert.equal(w.opened.length,0);
+  // If one tab cannot queue the chat, a later supporting tab can still accept it.
+  posted = null; w = await worker({windows:[oldApp, app]}); await w.click({type:'message',from:'other'});
+  assert.equal(posted.id,'other'); assert.equal(navigated,0); assert.equal(w.opened.length,0);
   const broken = { url:'https://example.test/rada/', focus:async()=>{throw Error('closed');} };
   w = await worker({windows:[broken]}); await w.click({type:'message',from:'someone'}); assert.equal(w.opened[0],'https://example.test/rada/?chat=someone');
 
@@ -60,5 +65,6 @@ async function worker({ windows = [], failMatch = false } = {}) {
   assert(backend.includes('notif?.messages === false || notif?.desktop === false'));
   assert(backend.includes('JSON.stringify({ type: "message", from: m.sender_id })'));
   assert(!backend.includes('previewOf('));
-  console.log('Notification checks passed: worker previews, routing, failures and calls; backend payload checks');
+  console.log('Mock worker and backend source checks passed: generic push previews, safe click routing and basic failures');
+  console.warn('DRAFT: direct client message/call/update notifications can expose private content; local mute and call settings remain incomplete. Client patch is unapplied; see PWA.md.');
 })().catch(e=>{console.error(e); process.exitCode=1;});
