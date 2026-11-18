@@ -1,1 +1,2 @@
-MCP test: plain text.
+Line one
+Line "two" \ and emoji 🔒
