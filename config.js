@@ -16,3 +16,15 @@ window.ICE_SERVERS = [
 // ---------- RINGING WHEN THE APP IS CLOSED (Web Push) ----------
 // Public VAPID key from:  npx web-push generate-vapid-keys   (see SETUP.md). Leave "" to disable.
 window.VAPID_PUBLIC_KEY = "BLqaXsu3N8EEmc8vqBntCBZC6Afsi41BpEulx2SAjaqv7LhgzKcNWpd0BayjoAVTjqyJpRGcbknFEGXWF2PKUH8";
+
+// ---------- LINK WHATSAPP (Settings > Link WhatsApp) ----------
+// Needs: schema.sql run in Supabase, and the Node server in /server running 24/7.
+// The server uses the service_role key in ITS OWN .env file. Never put that key in this file.
+window.WA_LINK = {
+  enabled: true,              // set false to hide the Link WhatsApp card completely
+  defaultCountryCode: "254",  // pre-fills the number box; a leading 0 is swapped for this (0712... -> 254712...)
+  codeTtlSeconds: 170,        // how long a pairing code is shown before "expired"
+  requestTimeoutMs: 30000,    // how long to wait for the server before showing "not responding"
+  title: "Link WhatsApp",
+  subtitle: "Connect with a code instead of a QR code"
+};

@@ -3,11 +3,9 @@
    1. Forgot password (email code, or email link)
    2. Live "typing…" indicator (1:1 chats and groups)
    3. Private groups (create, chat, add/remove members, leave, delete)
-   4. Block + Report wired into the ⋮ menu (fixes the old broken buttons)
-   Needs features.sql to have been run in Supabase.
-   Uses globals from app.js / extras.js: sb, me, profiles, messages, activeId,
-   esc, nameOf, avatar, timeStr, listTime, toast, modal, vb, fmtDate,
-   isBlocked, setBlock, openReport, S, renderList, openHeader.
+   4. Block + Report wired into the ⋮ menu
+   5. Document sharing (pdf, word, excel, powerpoint, txt, zip ...)
+   Needs features.sql and document-sharing.sql to have been run in Supabase.
    ============================================================ */
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -16,6 +14,37 @@
   const stop = (e) => { e.preventDefault(); e.stopImmediatePropagation(); };
   const lsGet = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+  /* ---------------- documents ---------------- */
+  const DOC_EXT = ['pdf','doc','docx','xls','xlsx','ppt','pptx','odt','ods','odp','txt','csv','rtf','json','zip','rar','7z','epub','md'];
+  const DOC_ACCEPT = 'image/*,video/*,audio/*,' + DOC_EXT.map((e) => '.' + e).join(',');
+  const extOf = (n) => (String(n).split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const isMedia = (f) => /^(image|video|audio)\//.test(f.type);
+  const isDoc = (f) => !isMedia(f) && DOC_EXT.includes(extOf(f.name));
+  const fmtSize = (b) => !b ? '' : b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(0) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
+  const docIcon = (n) => ({ pdf:'📕', doc:'📘', docx:'📘', odt:'📘', xls:'📗', xlsx:'📗', csv:'📗', ods:'📗', ppt:'📙', pptx:'📙', odp:'📙', zip:'🗜', rar:'🗜', '7z':'🗜', txt:'📄', md:'📄', json:'📄', rtf:'📄', epub:'📚' }[extOf(n)] || '📎');
+  const DOC_BUCKET = 'chat-files', DOC_MAX = 25 * 1024 * 1024;
+
+  const docCss = document.createElement('style');
+  docCss.textContent = `
+  .gm-doc{display:flex;align-items:center;gap:10px;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:rgba(0,0,0,.06);color:inherit;text-decoration:none;min-width:200px;max-width:100%}
+  .gm-doc-ic{font-size:30px;line-height:1}
+  .gm-doc-t{flex:1;min-width:0}.gm-doc-t b{display:block;font-size:14px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit!important}
+  .gm-doc-t small{display:block;text-align:left;font-size:11.5px;opacity:.7;margin:0}
+  .gm-doc-dl{font-size:18px;opacity:.7}
+  .doc-row{display:flex;align-items:center;gap:10px;padding:8px 16px;text-decoration:none;color:inherit}`;
+  document.head.appendChild(docCss);
+
+  async function uploadDoc(file) {
+    if (file.size > DOC_MAX) throw new Error(file.name + ' is bigger than 25 MB.');
+    const path = `${myId()}/docs/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${extOf(file.name) || 'bin'}`;
+    const up = await sb.storage.from(DOC_BUCKET).upload(path, file, { contentType: file.type || 'application/octet-stream' });
+    if (up.error) throw up.error;
+    return sb.storage.from(DOC_BUCKET).getPublicUrl(path).data.publicUrl;
+  }
+  const docCard = (url, name, size) => `<a class="gm-doc" href="${esc(url)}" target="_blank" rel="noopener" download="${esc(name || 'file')}">
+    <span class="gm-doc-ic">${docIcon(name)}</span><span class="gm-doc-t"><b>${esc(name || 'Document')}</b><small>${esc(extOf(name).toUpperCase())}${size ? ' · ' + fmtSize(size) : ''}</small></span><span class="gm-doc-dl">⬇</span></a>`;
+  window.radaDocCard = (m) => docCard(m.media_url, m.media_name, m.media_size);   // for app.js (1:1 chats)
 
   /* ---------------- styles ---------------- */
   const css = document.createElement('style');
@@ -264,7 +293,9 @@
   const canEdit = (g) => !!g && (g.edit_info !== 'admins' || isAdmin(g));
   const colorFor = (id) => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 55% 38%)`; };
   const gAv = (g, cls = '') => `<div class="avatar g-av ${cls}">${g && g.avatar_url ? `<img src="${esc(g.avatar_url)}" alt="">` : '👥'}</div>`;
-  const msgPreview = (m) => (m.media_url ? { image: '📷 Photo', video: '🎥 Video', audio: '🎵 Audio' }[m.media_type] || '📎 File' : m.content);
+  const msgPreview = (m) => (m.media_url
+    ? (m.media_type === 'file' ? '📄 ' + (m.media_name || 'Document') : { image: '📷 Photo', video: '🎥 Video', audio: '🎵 Audio' }[m.media_type] || '📎 File')
+    : m.content);
 
   const gcss = document.createElement('style');
   gcss.textContent = `
@@ -402,7 +433,7 @@
       <button id="gv-menu" type="button" aria-label="Group info">⋮</button></header>
       <div id="gv-msgs"></div>
       <div id="gv-lock" class="hidden">Only admins can send messages in this group.</div>
-      <form id="gv-form"><label id="gv-attach" title="Photo, video or audio">📎<input id="gv-file" type="file" accept="image/*,video/*,audio/*" multiple hidden></label>
+      <form id="gv-form"><label id="gv-attach" title="Photo, video, audio or document">📎<input id="gv-file" type="file" accept="${DOC_ACCEPT}" multiple hidden></label>
         <textarea id="gv-input" rows="1" maxlength="2000" placeholder="Message"></textarea><button id="gv-send" type="submit" aria-label="Send">➤</button></form>`;
     document.body.appendChild(d);
     $('gv-back').onclick = () => closeGroup();
@@ -427,15 +458,19 @@
     $('gv-file').onchange = async (e) => {
       const files = [...e.target.files]; e.target.value = ''; const gid = openG;
       for (const f of files) {
-        const kind = f.type.startsWith('image/') ? 'image' : f.type.startsWith('video/') ? 'video' : f.type.startsWith('audio/') ? 'audio' : null;
-        if (!kind) { toast('Only photos, videos and audio can be sent.'); continue; }
-        if (f.size > 25 * 1024 * 1024) { toast(f.name + ' is bigger than 25 MB.'); continue; }
-        toast('Sending ' + kind + '…');
+        const kind = f.type.startsWith('image/') ? 'image' : f.type.startsWith('video/') ? 'video' : f.type.startsWith('audio/') ? 'audio' : isDoc(f) ? 'file' : null;
+        if (!kind) { toast(f.name + ': this file type is not supported.'); continue; }
+        if (f.size > DOC_MAX) { toast(f.name + ' is bigger than 25 MB.'); continue; }
+        toast('Sending ' + (kind === 'file' ? 'document' : kind) + '…');
         try {
-          const blob = kind === 'image' ? await shrink(f, 1600) : f;
-          const ext = (blob.type === 'image/jpeg' ? 'jpg' : (f.name.split('.').pop() || 'bin')).toLowerCase().replace(/[^a-z0-9]/g, '');
-          const url = await uploadTo(`${gid}/media/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`, blob);
-          if (openG === gid) await send({ content: '', media_url: url, media_type: kind, media_name: f.name.slice(0, 120) });
+          let url, blob = f;
+          if (kind === 'file') url = await uploadDoc(f);
+          else {
+            blob = kind === 'image' ? await shrink(f, 1600) : f;
+            const ext = (blob.type === 'image/jpeg' ? 'jpg' : extOf(f.name) || 'bin');
+            url = await uploadTo(`${gid}/media/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`, blob);
+          }
+          if (openG === gid) await send({ content: '', media_url: url, media_type: kind, media_name: f.name.slice(0, 120), media_size: f.size, media_mime: f.type || null });
         } catch (err) { toast(err.message); }
       }
     };
@@ -448,7 +483,8 @@
     list.forEach((m) => {
       const d = fmtDate(m.created_at); if (d !== day) { day = d; h += `<div class="gm-day">${esc(d)}</div>`; }
       const mine = m.sender_id === myId(), u = esc(m.media_url || '');
-      const media = !m.media_url ? '' : m.media_type === 'image' ? `<a href="${u}" target="_blank" rel="noopener"><img class="gm-img" src="${u}" loading="lazy" alt=""></a>`
+      const media = !m.media_url ? '' : m.media_type === 'file' ? docCard(m.media_url, m.media_name, m.media_size)
+        : m.media_type === 'image' ? `<a href="${u}" target="_blank" rel="noopener"><img class="gm-img" src="${u}" loading="lazy" alt=""></a>`
         : m.media_type === 'video' ? `<video class="gm-img" src="${u}" controls preload="metadata"></video>` : `<audio src="${u}" controls preload="none"></audio>`;
       h += `<div class="gm ${mine ? 'me' : 'in'}">${mine ? '' : `<b style="color:${colorFor(m.sender_id)}">${esc(pname(m.sender_id))}</b>`}${media}${m.content ? `<span class="gm-t">${esc(m.content)}</span>` : ''}<small>${timeStr(m.created_at)}</small></div>`;
     });
@@ -551,7 +587,7 @@
   }
 
   /* ---- group info (several screens inside one modal) ---- */
-  const TITLES_G = { main: 'Group info', perms: 'Group permissions', admins: 'Group admins', media: 'Media, links and audio' };
+  const TITLES_G = { main: 'Group info', perms: 'Group permissions', admins: 'Group admins', media: 'Media, docs and links' };
   const WHO_G = [['everyone', 'Everyone'], ['admins', 'Only admins']];
   const gSel = (k, t, val, sub) => `<label class="set-sel"><b>${t}</b>${sub ? `<small style="display:block;opacity:.7;font-weight:400">${sub}</small>` : ''}<select data-p="${k}">${WHO_G.map(([v, l]) => `<option value="${v}" ${v === val ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
 
@@ -617,10 +653,14 @@
     } else if (giView === 'media') {
       if (!giMedia || giMedia.gid !== g.id) { h += '<div class="empty-note">Loading…</div>'; loadGiMedia(g.id); }
       else {
-        const { media, links } = giMedia, au = media.filter((x) => x.media_type === 'audio'), vi = media.filter((x) => x.media_type !== 'audio');
+        const { media, links } = giMedia,
+              au = media.filter((x) => x.media_type === 'audio'),
+              dc = media.filter((x) => x.media_type === 'file'),
+              vi = media.filter((x) => x.media_type === 'image' || x.media_type === 'video');
         const tab = renderInfo.tab || 'm';
-        h += `<div class="media-tabs"><button class="${tab === 'm' ? 'active' : ''}" data-gi="tab" data-t="m" type="button">Media (${vi.length})</button><button class="${tab === 'a' ? 'active' : ''}" data-gi="tab" data-t="a" type="button">Audio (${au.length})</button><button class="${tab === 'l' ? 'active' : ''}" data-gi="tab" data-t="l" type="button">Links (${links.length})</button></div>`;
+        h += `<div class="media-tabs"><button class="${tab === 'm' ? 'active' : ''}" data-gi="tab" data-t="m" type="button">Media (${vi.length})</button><button class="${tab === 'a' ? 'active' : ''}" data-gi="tab" data-t="a" type="button">Audio (${au.length})</button><button class="${tab === 'd' ? 'active' : ''}" data-gi="tab" data-t="d" type="button">Docs (${dc.length})</button><button class="${tab === 'l' ? 'active' : ''}" data-gi="tab" data-t="l" type="button">Links (${links.length})</button></div>`;
         h += tab === 'm' ? (vi.length ? `<div class="media-grid">${vi.map((x) => x.media_type === 'image' ? `<a href="${esc(x.media_url)}" target="_blank" rel="noopener"><img src="${esc(x.media_url)}" loading="lazy" alt=""></a>` : `<video src="${esc(x.media_url)}" controls preload="metadata"></video>`).join('')}</div>` : '<div class="empty-note">No photos or videos yet.</div>')
+          : tab === 'd' ? (dc.length ? dc.map((x) => `<a class="doc-row" href="${esc(x.media_url)}" target="_blank" rel="noopener"><span style="font-size:28px">${docIcon(x.media_name)}</span><span>${esc(x.media_name || 'Document')}<small style="display:block;opacity:.65">${fmtSize(x.media_size)}</small></span></a>`).join('') : '<div class="empty-note">No documents yet.</div>')
           : tab === 'a' ? (au.length ? au.map((x) => `<div style="padding:8px 16px">${esc(x.media_name || 'Audio')}<audio src="${esc(x.media_url)}" controls preload="none" style="width:100%"></audio></div>`).join('') : '<div class="empty-note">No audio yet.</div>')
           : (links.length ? links.map((u) => `<div style="padding:10px 16px"><a href="${esc(u)}" target="_blank" rel="noopener">${esc(u)}</a></div>`).join('') : '<div class="empty-note">No links yet.</div>');
       }
@@ -753,6 +793,35 @@
       else if (t === 'Block' || t === 'Unblock') { stop(e); menuEl.classList.add('hidden'); toggleBlockUI(activeId); }
       else if (t === 'New group') { stop(e); menuEl.classList.add('hidden'); openCreateGroup(); }
     } else { stop(e); const tm = $('top-menu'); if (tm) tm.classList.add('hidden'); openCreateGroup(); }
+  }, true);
+
+  /* ============================================================
+     5. DOCUMENTS IN 1:1 CHATS
+     Picks up document files chosen in the normal attach button.
+     Photos/videos/audio are still handled by app.js.
+     ============================================================ */
+  const af = $('attach-file');
+  if (af) af.addEventListener('change', async (e) => {
+    const all = [...af.files];
+    const docs = all.filter(isDoc), rest = all.filter((f) => !docs.includes(f));
+    if (!docs.length) return;                       // only photos/videos/audio: app.js handles them
+    if (!rest.length) { stop(e); } else {           // mixed: hand app.js only the media files
+      const dt = new DataTransfer(); rest.forEach((f) => dt.items.add(f)); af.files = dt.files;
+    }
+    const to = activeId; if (!to) return;
+    for (const f of docs) {
+      toast('Sending document…');
+      try {
+        const url = await uploadDoc(f);
+        // ASSUMPTION: table "messages" with sender_id / receiver_id. Match the insert used in app.js.
+        const { error } = await sb.from('messages').insert({
+          sender_id: myId(), receiver_id: to, content: '',
+          media_url: url, media_type: 'file', media_name: f.name.slice(0, 120), media_size: f.size, media_mime: f.type || null,
+        });
+        if (error) throw error;
+      } catch (err) { toast(err.message); }
+    }
+    if (!rest.length) af.value = '';
   }, true);
 
   /* ============================================================

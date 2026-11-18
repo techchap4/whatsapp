@@ -17,6 +17,8 @@
   <link rel="apple-touch-icon" href="icon-maskable-512.png">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="extras.css">
+  <!-- NEW: WhatsApp link feature styles -->
+  <link rel="stylesheet" href="whatsapp.css">
 </head>
 <body>
 
@@ -198,9 +200,9 @@
             <svg class="so" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.2" fill="currentColor" stroke="none"/><path d="M8 14.5c1 1.5 2.3 2.2 4 2.2s3-.7 4-2.2"/></svg>
           </button>
           <textarea id="msg-input" rows="1" placeholder="Message" maxlength="4000"></textarea>
-          <label class="icon-btn" title="Attach photo, video, audio or music">
+          <label class="icon-btn" title="Attach photo, video, audio or document">
             <svg class="fl" viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
-            <input id="attach-file" type="file" accept="image/*,video/*,audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac" multiple hidden>
+            <input id="attach-file" type="file" accept="image/*,video/*,audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.rtf,.json,.zip,.rar,.7z,.epub,.md" multiple hidden>
           </label>
           <label class="icon-btn" title="Camera">
             <svg class="so" viewBox="0 0 24 24"><path d="M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4H9z"/><circle cx="12" cy="13" r="3.6"/></svg>
@@ -311,9 +313,12 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> <!-- skip if you already load it -->
+<script src="whatsapp-inbox.js"></script>
 <script src="extras.js"></script>
 <script src="menu.js"></script>
 <script src="features.js"></script>
+<!-- NEW: WhatsApp link feature (must come after features.js, before pwa.js) -->
 <script src="pwa.js"></script>
 </body>
 </html>

@@ -18,6 +18,7 @@ let started = false;
 let realtimeCh = null, presenceCh = null;
 let statusViews = {};        // status_id -> [{viewer_id, viewed_at}] (only for my statuses)
 let pruneTimer = null;
+let accessToken = null;      // used to save last seen when the tab closes
 const DAY_MS = 24 * 3600 * 1000;
 const alive = (s) => Date.now() - new Date(s.created_at).getTime() < DAY_MS;
 const isMobile = () => window.matchMedia('(max-width: 760px)').matches;
@@ -169,6 +170,7 @@ $('otp-back').onclick = () => setMode('signup');
 $('btn-logout').onclick = async () => { await unregisterPush(); await sb.auth.signOut(); };
 
 sb.auth.onAuthStateChange((event, session) => {
+  if (session) accessToken = session.access_token;
   if (session && !started) { started = true; setTimeout(() => start(session.user), 0); }
   if (!session && started) { stop(); }
 });
@@ -184,13 +186,14 @@ async function start(user) {
   await Promise.all([loadMessages(), loadStatuses()]);
   renderAll();
   subscribe();
+  startLastSeen();
   initCalls();
   initExtras();
   registerPush();
   pruneTimer = setInterval(pruneStatuses, 60000);
 }
 function stop() {
-  stopCalls(); stopExtras();
+  stopCalls(); stopExtras(); stopLastSeen();
   started = false; me = null; profiles = {}; messages = []; statuses = []; activeId = null; statusViews = {}; clearInterval(pruneTimer);
   if (realtimeCh) sb.removeChannel(realtimeCh);
   if (presenceCh) sb.removeChannel(presenceCh);
@@ -252,15 +255,24 @@ function subscribe() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'statuses' }, () => loadStatuses())
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'status_views' }, () => loadViews())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (p) => {
-      if (p.new && p.new.id) { profiles[p.new.id] = p.new; if (p.new.id === me.id && checkBanned()) return; renderAll(); if (activeId) openHeader(); }
+      if (p.new && p.new.id) {
+        // a heartbeat only changes last_seen: update quietly, don't re-render the whole app
+        const old = profiles[p.new.id];
+        const onlySeen = old && Object.keys(p.new).every((k) => k === 'last_seen' || JSON.stringify(old[k]) === JSON.stringify(p.new[k]));
+        profiles[p.new.id] = p.new;
+        if (onlySeen) { if (activeId === p.new.id) openHeader(); return; }
+        if (p.new.id === me.id && checkBanned()) return; renderAll(); if (activeId) openHeader();
+      }
     })
     .subscribe();
 
   presenceCh = sb.channel('online-users', { config: { presence: { key: me.id } } });
   presenceCh.on('presence', { event: 'sync' }, () => {
-    online = new Set(Object.keys(presenceCh.presenceState()));
+    const now = new Set(Object.keys(presenceCh.presenceState()));
+    markLeft(online, now);          // someone just went offline: show "last seen" instantly
+    online = now;
     if (activeId) openHeader();
-  }).subscribe(async (s) => { if (s === 'SUBSCRIBED') await presenceCh.track({ at: Date.now() }); });
+  }).subscribe(async (s) => { if (s === 'SUBSCRIBED' && !document.hidden) await presenceCh.track({ at: Date.now() }); });
 }
 
 function onMessage(m) {
@@ -357,7 +369,7 @@ function openHeader() {
   const p = profiles[activeId];
   $('conv-avatar').innerHTML = avatar(p, 'sm');
   $('conv-name').innerHTML = esc(nameOf(p)) + vb(p);
-  $('conv-sub').textContent = online.has(activeId) && canSee(p, 'online') ? 'online' : '@' + (p?.username || '');
+  $('conv-sub').textContent = statusLine(p);
 }
 function renderMessages(scroll) {
   const box = $('messages');
@@ -1104,5 +1116,58 @@ document.addEventListener('click', async (e)=>{
   if(error){alert('Could not delete message. Check the messages DELETE policy in Supabase: '+error.message);return;}
   messages=messages.filter(m=>String(m.id)!==String(id)); renderMessages(false); renderList();
 });
+
+/* ============================================================
+   UPDATE 7: last seen
+   - online  -> live, from Supabase Presence
+   - offline -> "last seen today at 14:05" from profiles.last_seen
+   - hidden by the same privacy rule as "online" (canSee(p,'online'))
+   needs: profiles.last_seen column (see last_seen.sql)
+   ============================================================ */
+const SEEN_BEAT_MS = 60000;
+let seenTimer = null;
+
+function fmtSeen(iso) {
+  if (!iso) return '';
+  const d = dayLabel(iso), t = timeStr(iso);
+  return d === 'Today' ? `last seen today at ${t}` : d === 'Yesterday' ? `last seen yesterday at ${t}` : `last seen ${d}`;
+}
+function statusLine(p) {
+  if (!p) return '';
+  if (canSee(p, 'online')) {
+    if (online.has(p.id)) return 'online';
+    if (p.last_seen) return fmtSeen(p.last_seen);
+  }
+  return '@' + (p.username || '');
+}
+function markLeft(prev, next) {            // people who were online and now are not
+  const now = new Date().toISOString();
+  prev.forEach((id) => { if (!next.has(id) && profiles[id]) profiles[id].last_seen = now; });
+}
+async function beatSeen() {
+  if (!me || document.hidden) return;
+  const now = new Date().toISOString();
+  if (profiles[me.id]) profiles[me.id].last_seen = now;
+  const { error } = await sb.from('profiles').update({ last_seen: now }).eq('id', me.id);
+  if (error) console.warn('last seen not saved:', error.message);
+}
+function saveSeenOnExit() {                // keepalive request survives the tab closing
+  if (!me || !accessToken) return;
+  try {
+    fetch(`${window.SUPABASE_URL}/rest/v1/profiles?id=eq.${me.id}`, {
+      method: 'PATCH', keepalive: true,
+      headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ last_seen: new Date().toISOString() })
+    });
+  } catch (e) {}
+}
+function startLastSeen() { beatSeen(); clearInterval(seenTimer); seenTimer = setInterval(beatSeen, SEEN_BEAT_MS); }
+function stopLastSeen() { clearInterval(seenTimer); seenTimer = null; }
+document.addEventListener('visibilitychange', () => {
+  if (!me || !presenceCh) return;
+  if (document.hidden) { presenceCh.untrack(); saveSeenOnExit(); }       // backgrounded = offline
+  else { presenceCh.track({ at: Date.now() }); beatSeen(); }
+});
+window.addEventListener('pagehide', saveSeenOnExit);
 
 setMode('login');
