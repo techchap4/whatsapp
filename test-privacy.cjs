@@ -1,5 +1,8 @@
 'use strict';
-// Offline unit tests of the actual app functions with synthetic data only.
+// INACTIVE / INCOMPLETE proposal: these offline synthetic-data tests target the
+// patched app.js and extras.js, NOT this branch as-is. They are expected to fail
+// until app-privacy-INACTIVE.patch is reviewed and applied in an isolated checkout.
+// They do not verify backend permissions, E2E behavior, or live security.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
