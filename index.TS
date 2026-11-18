@@ -32,26 +32,6 @@ const json = (body: unknown, status = 200): Response =>
     headers: { ...cors, "Content-Type": "application/json" },
   });
 
-function previewOf(m: MessageRow): string {
-  const text = (m.content ?? "").trim();
-  const label: Record<string, string> = {
-    image: "📷 Photo",
-    video: "🎥 Video",
-    audio: "🎵 Audio",
-    voice: "🎤 Voice note",
-  };
-  let out = "";
-  if (m.media_url) {
-    out = m.media_type === "file"
-      ? "📄 " + (m.media_name || "Document")
-      : (label[m.media_type ?? ""] || "📎 File");
-    if (text) out += " " + text;
-  } else {
-    out = text;
-  }
-  return out.length > 140 ? out.slice(0, 137) + "…" : out || "New message";
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
@@ -83,20 +63,19 @@ Deno.serve(async (req: Request) => {
 
     const admin = createClient(url, serviceRoleKey);
 
-    const { data: sender } = await admin
-      .from("profiles")
-      .select("full_name, username")
-      .eq("id", m.sender_id)
-      .single();
-    const name = sender?.full_name || sender?.username || "New message";
+    // Notification preferences are stored on the receiver's profile. Fail closed
+    // on a lookup error rather than sending an alert contrary to their choice.
+    const { data: recipient, error: profileError } = await admin
+      .from("profiles").select("settings").eq("id", m.receiver_id).single();
+    if (profileError || !recipient) return json({ error: "notification settings unavailable" }, 500);
+    const notif = recipient.settings?.notif;
+    if (notif?.messages === false || notif?.desktop === false) {
+      return json({ skipped: "message notifications disabled" });
+    }
 
-    const payload = JSON.stringify({
-      type: "message",
-      from: m.sender_id,
-      messageId: m.id ?? null,
-      title: name,
-      body: previewOf(m),
-    });
+    // Only the routing identifier is necessary; never send a name, text,
+    // filename, avatar, or message ID in the push payload.
+    const payload = JSON.stringify({ type: "message", from: m.sender_id });
 
     webpush.setVapidDetails(
       Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@example.com",
