@@ -1,0 +1,125 @@
+diff --git a/app.js b/app.js
+index 9522694..2a183e8 100644
+--- a/app.js
++++ b/app.js
+@@ -219,9 +219,10 @@ async function loadProfiles() {
+   }
+ }
+ async function loadMessages() {
+-  const { data, error } = await sb.from('messages').select('*').order('created_at', { ascending: true }).limit(3000);
++  const userId = me.id;
++  const { data, error } = await sb.from('messages').select('*').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`).order('created_at', { ascending: true }).limit(3000);
+   if (error) return console.error(error);
+-  messages = data;
++  if (me && me.id === userId) messages = (data || []).filter((m) => m.sender_id === userId || m.receiver_id === userId);
+ }
+ async function loadStatuses() {
+   const since = new Date(Date.now() - DAY_MS).toISOString();
+@@ -246,12 +247,16 @@ async function loadViews() {
+ 
+ /* ---------------- realtime ---------------- */
+ function subscribe() {
++  const updateMessage = (p) => {
++    if (!me || !p.new || (p.new.sender_id !== me.id && p.new.receiver_id !== me.id)) return;
++    const i = messages.findIndex((m) => m.id === p.new.id);
++    if (i >= 0) { messages[i] = p.new; renderList(); if (activeId) renderMessages(false); }
++  };
+   realtimeCh = sb.channel('db-changes')
+-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p) => onMessage(p.new))
+-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (p) => {
+-      const i = messages.findIndex((m) => m.id === p.new.id);
+-      if (i >= 0) { messages[i] = p.new; renderList(); if (activeId) renderMessages(false); }
+-    })
++    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'sender_id=eq.' + me.id }, (p) => onMessage(p.new))
++    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'receiver_id=eq.' + me.id }, (p) => onMessage(p.new))
++    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: 'sender_id=eq.' + me.id }, updateMessage)
++    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: 'receiver_id=eq.' + me.id }, updateMessage)
+     .on('postgres_changes', { event: '*', schema: 'public', table: 'statuses' }, () => loadStatuses())
+     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'status_views' }, () => loadViews())
+     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (p) => {
+@@ -276,6 +281,7 @@ function subscribe() {
+ }
+ 
+ function onMessage(m) {
++  if (!me || !m || (m.sender_id !== me.id && m.receiver_id !== me.id)) return;
+   if (messages.some((x) => x.id === m.id)) return;
+   messages.push(m);
+   const incoming = m.receiver_id === me.id;
+@@ -306,7 +312,11 @@ async function markRead(otherId) {
+   const ids = messages.filter((m) => m.sender_id === otherId && m.receiver_id === me.id && !m.read);
+   if (!ids.length) return;
+   ids.forEach((m) => (m.read = true));
+-  await sb.from('messages').update({ read: true }).eq('sender_id', otherId).eq('receiver_id', me.id).eq('read', false);
++  // With receipts off, clear unread indicators only in this tab's memory.
++  // No server update is sent; unread indicators may return on reload.
++  if (profiles[me.id] && S().privacy.receipts !== false) {
++    await sb.from('messages').update({ read: true }).eq('sender_id', otherId).eq('receiver_id', me.id).eq('read', false);
++  }
+   renderList(); updateTitle();
+ }
+ document.addEventListener('visibilitychange', () => { if (!document.hidden && activeId && me) markRead(activeId); });
+diff --git a/extras.js b/extras.js
+index bbcc102..fedb84f 100644
+--- a/extras.js
++++ b/extras.js
+@@ -35,10 +35,12 @@ function canSee(p, field) {
+   if (v === 'nobody') return false;
+   return messages.some((m) => (m.sender_id === p.id && m.receiver_id === me.id) || (m.sender_id === me.id && m.receiver_id === p.id));
+ }
+-/* read receipts: blue ticks only if the receiver allows it (like WhatsApp) */
++/* Do not disclose the read flag through tick count or color when receipts are off. */
+ function tickHtml(m) {
+-  const rcv = profiles[m.receiver_id], blue = m.read && !(rcv && rcv.settings && rcv.settings.privacy && rcv.settings.privacy.receipts === false);
+-  return `<span class="tick ${blue ? 'read' : ''}">${m.read ? '✓✓' : '✓'}</span>`;
++  const rcv = profiles[m.receiver_id];
++  const allowed = S().privacy.receipts !== false && !(rcv && rcv.settings && rcv.settings.privacy && rcv.settings.privacy.receipts === false);
++  const read = allowed && m.read;
++  return `<span class="tick ${read ? 'read' : ''}">${read ? '✓✓' : '✓'}</span>`;
+ }
+ 
+ /* ---------------- small UI helpers ---------------- */
+@@ -236,30 +238,9 @@ renderProfilePane = function () {
+   const b = $('v-apply'); if (b) b.onclick = openVerify;
+ };
+ function openVerify() {
+-  const m = modal('modal-verify', 'Apply for verification'), p = profiles[me.id];
+-  m.querySelector('.mbody').innerHTML = `<div class="set-form">
+-    <label>Full legal name<input id="vf-name" value="${esc(p.full_name || '')}" maxlength="80"></label>
+-    <label>Category<select id="vf-cat">${VCATS.map((c) => `<option>${c}</option>`).join('')}</select></label>
+-    <label>Why should your account be verified?<textarea id="vf-why" rows="3" maxlength="600" placeholder="Tell the admins who you are and why you need the badge"></textarea></label>
+-    <label>Website or social links<input id="vf-links" maxlength="300" placeholder="https://..."></label>
+-    <label>ID or proof photo (private, only admins see it)<input id="vf-doc" type="file" accept="image/*"></label>
+-    <p id="vf-msg" class="auth-msg"></p><button id="vf-send" class="primary" type="button">Submit request</button></div>`;
++  const m = modal('modal-verify', 'Apply for verification');
++  m.querySelector('.mbody').innerHTML = `<div class="set-form"><p>New verification requests are paused while document storage and access are reviewed. Please do not send identity documents through the app.</p><p>Existing requests and badges are not affected by this pause.</p></div>`;
+   m.classList.remove('hidden');
+-  $('vf-send').onclick = async () => {
+-    const msg = $('vf-msg'), name = $('vf-name').value.trim(), why = $('vf-why').value.trim(), f = $('vf-doc').files[0];
+-    msg.classList.remove('ok');
+-    if (!name || !why) { msg.textContent = 'Fill in your name and the reason.'; return; }
+-    if (!f) { msg.textContent = 'Add a photo of an ID or other proof.'; return; }
+-    if (f.size > 5 * 1024 * 1024) { msg.textContent = 'Photo must be under 5 MB.'; return; }
+-    const btn = $('vf-send'); btn.disabled = true; msg.textContent = 'Uploading…';
+-    try {
+-      const path = `${me.id}/${Date.now()}.${(f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+-      const up = await sb.storage.from('verification-docs').upload(path, f, { contentType: f.type }); if (up.error) throw up.error;
+-      const { data, error } = await sb.from('verification_requests').insert({ user_id: me.id, full_name: name, category: $('vf-cat').value, reason: why, links: $('vf-links').value.trim() || null, doc_path: path }).select().single();
+-      if (error) throw new Error(/duplicate|unique/i.test(error.message) ? 'You already have a request waiting for review.' : error.message);
+-      myVerif = data; m.classList.add('hidden'); renderProfilePane(); renderSettings(); toast('Request sent. We will notify you.');
+-    } catch (e) { msg.textContent = e.message; btn.disabled = false; }
+-  };
+ }
+ 
+ /* ============================================================
+@@ -295,9 +276,9 @@ function renderSettings() {
+         <p id="set-msg" class="auth-msg"></p>`;
+       // the verification card button lives in this view too
+     } else if (settingsView === 'privacy') {
+-      h += `<p class="set-note">Choose who can see your information. "My chats" means people you have exchanged messages with.</p>
++      h += `<p class="set-note">These display preferences are applied by this app, not a guarantee of privacy from other clients or direct access. Online presence and profile data may still be shared by the service; media links may be public. Do not share sensitive information until server protections are verified. "My chats" means people you have exchanged messages with.</p>
+         ${sSel('privacy.online', 'Last seen and online', WHO, s.privacy.online)}${sSel('privacy.photo', 'Profile photo', WHO, s.privacy.photo)}${sSel('privacy.about', 'About', WHO, s.privacy.about)}
+-        ${sTog('privacy.receipts', 'Read receipts', 'If off, you will not send or see blue ticks.', s.privacy.receipts)}
++        ${sTog('privacy.receipts', 'Read receipts', 'When off, this app does not send new read updates or show read ticks. Unread indicators may return after reload; other or older clients may behave differently. Turning it on may send receipts for previously unread messages.', s.privacy.receipts)}
+         ${sRow('blocked', '⛔', 'Blocked contacts', myBlocks.size ? myBlocks.size + ' blocked' : 'None')}`;
+     } else if (settingsView === 'blocked') {
+       h += myBlocks.size ? [...myBlocks].map((id) => `<div class="item">${avatar(profiles[id], 'sm')}<div class="body"><div class="top"><span class="name">${esc(nameOf(profiles[id]))}</span></div></div><button class="mini" data-unblock="${id}" type="button">Unblock</button></div>`).join('') : '<div class="empty-note">You have not blocked anyone.</div>';
