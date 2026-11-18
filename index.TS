@@ -1,12 +1,17 @@
-// Supabase Edge Function: sends a Web Push so the other person's phone rings even if the app is closed.
+// Supabase Edge Function: sends a Web Push for every new chat message,
+// so the receiver sees a notification even when Rada is closed.
+// Called by a database trigger on public.messages (see message_push.sql).
 import { createClient } from "npm:@supabase/supabase-js";
 import webpush from "npm:web-push";
 
-type PushRequest = {
-  to?: string;
-  callId?: string;
-  kind?: "audio" | "voice" | "video";
-  type?: "invite" | "missed";
+type MessageRow = {
+  id?: string | number;
+  sender_id?: string;
+  receiver_id?: string;
+  content?: string | null;
+  media_url?: string | null;
+  media_type?: string | null;
+  media_name?: string | null;
 };
 
 type PushSubscription = {
@@ -18,7 +23,7 @@ type PushSubscription = {
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-webhook-secret",
 };
 
 const json = (body: unknown, status = 200): Response =>
@@ -27,59 +32,71 @@ const json = (body: unknown, status = 200): Response =>
     headers: { ...cors, "Content-Type": "application/json" },
   });
 
+function previewOf(m: MessageRow): string {
+  const text = (m.content ?? "").trim();
+  const label: Record<string, string> = {
+    image: "📷 Photo",
+    video: "🎥 Video",
+    audio: "🎵 Audio",
+    voice: "🎤 Voice note",
+  };
+  let out = "";
+  if (m.media_url) {
+    out = m.media_type === "file"
+      ? "📄 " + (m.media_name || "Document")
+      : (label[m.media_type ?? ""] || "📎 File");
+    if (text) out += " " + text;
+  } else {
+    out = text;
+  }
+  return out.length > 140 ? out.slice(0, 137) + "…" : out || "New message";
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 
   try {
+    // only our database trigger may call this function
+    const secret = Deno.env.get("MESSAGE_PUSH_SECRET");
+    if (!secret || req.headers.get("x-webhook-secret") !== secret) {
+      return json({ error: "unauthorized" }, 401);
+    }
+
+    const body = await req.json();
+    const m = (body.record ?? body) as MessageRow;
+    if (!m.sender_id || !m.receiver_id || m.sender_id === m.receiver_id) {
+      return json({ skipped: "no receiver" });
+    }
+    // call history lines are handled by call-push
+    if (typeof m.content === "string" && m.content.startsWith("[[call:")) {
+      return json({ skipped: "call line" });
+    }
+
     const url = Deno.env.get("SUPABASE_URL");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    if (!url || !anonKey) return json({ error: "missing supabase configuration" }, 500);
-
-    const userClient = createClient(url, anonKey, {
-      global: {
-        headers: { Authorization: req.headers.get("Authorization") ?? "" },
-      },
-    });
-
-    const {
-      data: { user },
-    } = await userClient.auth.getUser();
-
-    if (!user) return json({ error: "unauthorized" }, 401);
-
-    const body = (await req.json()) as PushRequest;
-    const { to, callId, kind, type } = body;
-
-    if (!to || !callId || !type || !["invite", "missed"].includes(type)) {
-      return json({ error: "bad request" }, 400);
-    }
-
-    if (!kind || !["audio", "voice", "video"].includes(kind)) {
-      return json({ error: "bad request" }, 400);
-    }
-
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!serviceRoleKey) return json({ error: "missing supabase service role key" }, 500);
-
-    const admin = createClient(url, serviceRoleKey);
-    const { data: me } = await admin.from("profiles").select("full_name, username").eq("id", user.id).single();
-    const name = me?.full_name || me?.username || "Someone";
-    const label = kind === "video" ? "video" : "voice";
-
-    const payload = JSON.stringify({
-      type,
-      callId,
-      kind,
-      from: user.id,
-      title: name,
-      body: type === "invite" ? `Incoming ${label} call` : `Missed ${label} call`,
-    });
+    if (!url || !serviceRoleKey) return json({ error: "missing supabase configuration" }, 500);
 
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-    if (!vapidPublicKey || !vapidPrivateKey) {
-      return json({ error: "missing vapid configuration" }, 500);
-    }
+    if (!vapidPublicKey || !vapidPrivateKey) return json({ error: "missing vapid configuration" }, 500);
+
+    const admin = createClient(url, serviceRoleKey);
+
+    const { data: sender } = await admin
+      .from("profiles")
+      .select("full_name, username")
+      .eq("id", m.sender_id)
+      .single();
+    const name = sender?.full_name || sender?.username || "New message";
+
+    const payload = JSON.stringify({
+      type: "message",
+      from: m.sender_id,
+      messageId: m.id ?? null,
+      title: name,
+      body: previewOf(m),
+    });
 
     webpush.setVapidDetails(
       Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@example.com",
@@ -87,7 +104,7 @@ Deno.serve(async (req: Request) => {
       vapidPrivateKey,
     );
 
-    const { data: subs } = await admin.from("push_subscriptions").select("*").eq("user_id", to);
+    const { data: subs } = await admin.from("push_subscriptions").select("*").eq("user_id", m.receiver_id);
     const subscriptions = (subs ?? []) as PushSubscription[];
     let sent = 0;
 
@@ -97,7 +114,7 @@ Deno.serve(async (req: Request) => {
           await webpush.sendNotification(
             { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
             payload,
-            { TTL: type === "invite" ? 45 : 3600, urgency: "high" },
+            { TTL: 86400, urgency: "high" },
           );
           sent++;
         } catch (error) {

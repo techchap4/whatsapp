@@ -1,7 +1,8 @@
 /* Rada service worker:
    1) makes the app installable + opens instantly / offline shell
-   2) shows "incoming call" notifications when the app is closed or in the background */
-const CACHE = 'rada-shell-v4';
+   2) shows "incoming call" notifications when the app is closed or in the background
+   3) shows "new message" notifications when the app is closed or in the background */
+const CACHE = 'rada-shell-v5';
 const SHELL = ['./', 'index.html', 'style.css', 'extras.css', 'app.js', 'extras.js', 'menu.js', 'features.js',
   'config.js', 'pwa.js', 'manifest.json',
   'icon.svg', 'icon-maskable-512.png'];
@@ -46,7 +47,23 @@ self.addEventListener('push', (event) => {
   try { d = event.data.json(); } catch (e) {}
   event.waitUntil((async () => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    if (wins.some((w) => w.visibilityState === 'visible')) return;   // app is open: it rings by itself
+    if (wins.some((w) => w.visibilityState === 'visible')) return;   // app is open: it handles sound/alerts by itself
+
+    /* ---- new chat message ---- */
+    if (d.type === 'message') {
+      await self.registration.showNotification(d.title || 'Rada', {
+        body: d.body || 'New message',
+        tag: 'msg-' + (d.from || 'x'),        // one stacked notification per sender
+        renotify: true,
+        vibrate: [200, 100, 200],
+        icon: 'icon-maskable-512.png',
+        badge: 'icon-maskable-512.png',
+        data: d
+      });
+      return;
+    }
+
+    /* ---- calls (invite / missed) ---- */
     const ring = d.type === 'invite';
     await self.registration.showNotification(d.title || 'Rada', {
       body: d.body || '',
@@ -63,9 +80,17 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const d = event.notification.data || {};
+  const chatId = d.type === 'message' ? d.from : null;
   event.waitUntil((async () => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    if (wins.length) return wins[0].focus();   // the app re-sends the invite every 2.5s, so the call screen appears
-    return self.clients.openWindow('./');
+    if (wins.length) {
+      // app already open somewhere: bring it forward (calls re-send the invite every 2.5s, so the call screen appears)
+      try { await wins[0].focus(); } catch (e) {}
+      if (chatId) wins[0].postMessage({ type: 'open-chat', id: chatId });
+      return;
+    }
+    // app was closed: open it straight into that chat
+    return self.clients.openWindow(chatId ? './?chat=' + encodeURIComponent(chatId) : './');
   })());
 });
