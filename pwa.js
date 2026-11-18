@@ -3,9 +3,9 @@
   const $ = (id) => document.getElementById(id);
   const ua = navigator.userAgent || '';
 
-  /* ---- service worker (needed for install + offline shell) ---- */
+  /* ---- service worker (network-only app with an offline notice) ---- */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch((e) => console.warn('sw', e)));
+    window.addEventListener('load', () => navigator.serviceWorker.register(new URL('sw.js', document.baseURI).href).catch((e) => console.warn('sw', e)));
   }
 
   /* ---- are we already running as an installed app? ---- */
