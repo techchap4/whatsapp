@@ -69,14 +69,17 @@ self.addEventListener('notificationclick', (event) => {
     if (id) target.searchParams.set('chat', id);
     let wins = [];
     try { wins = (await self.clients.matchAll({ type: 'window', includeUncontrolled: true })).filter(isAppWindow); } catch (e) {}
+    let focused = false;
     for (const win of wins) {
       try {
         await win.focus();
+        focused = true;
         if (!id || await queueInClient(win, id)) return;
-        // Older tabs do not handle open-chat. Navigate only as a fallback.
-        if (typeof win.navigate === 'function' && await win.navigate(target.href)) return;
-      } catch (e) { /* Try another app window or open a new one. */ }
+      } catch (e) { /* Try another app window. */ }
     }
+    // Never navigate or reload a focused app window: it may contain an unsent draft.
+    // Until the client supports open-chat, focusing may not open the requested chat.
+    if (focused) return;
     try { await self.clients.openWindow(target.href); } catch (e) { /* platform may deny opening */ }
   })());
 });
