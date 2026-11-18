@@ -1,0 +1,107 @@
+diff --git a/app.js b/app.js
+index 9522694..efd8d13 100644
+--- a/app.js
++++ b/app.js
+@@ -282,17 +282,24 @@ function onMessage(m) {
+   if (incoming) {
+     const viewing = activeId === m.sender_id && !document.hidden;
+     if (viewing) markRead(m.sender_id);
+-    if (!parseCall(m) && S().notif.messages) { playReceive(); if (!viewing) desktopNotify(m); }
++    if (!parseCall(m) && S().notif.messages && !(window.isMuted && window.isMuted(m.sender_id))) { playReceive(); if (!viewing) desktopNotify(m); }
+   }
+   renderList();
+   if (activeId && (m.sender_id === activeId || m.receiver_id === activeId)) renderMessages(true);
+   updateTitle();
+ }
+-function desktopNotify(m) {
++async function desktopNotify(m) {
+   if (!S().notif.desktop) return;
+   if (!('Notification' in window) || Notification.permission !== 'granted' || !document.hidden) return;
+-  const p = profiles[m.sender_id];
+-  try { new Notification(nameOf(p), { body: previewText(m), icon: p?.avatar_url || undefined }); } catch (e) {}
++  const opts = { body: 'New message', icon: 'icon-maskable-512.png', tag: 'rada-message', data: { type: 'message', from: m.sender_id } };
++  try {
++    const reg = await getSw();
++    if (reg) await reg.showNotification('Rada', opts);
++    else {
++      const n = new Notification('Rada', opts);
++      n.onclick = () => { window.focus(); if (me && profiles[m.sender_id]) openChat(m.sender_id); n.close(); };
++    }
++  } catch (e) { /* notifications may be unavailable on this device */ }
+ }
+ function unreadCount(from) {
+   return messages.filter((m) => m.receiver_id === me.id && !m.read && (!from || m.sender_id === from)).length;
+@@ -1045,8 +1052,9 @@ function pushCall(to, c, type) {
+ }
+ async function notifyCall(c) {
+   if (!('Notification' in window) || Notification.permission !== 'granted' || !document.hidden) return;
+-  const pr = profiles[c.peerId], opts = { body: `Incoming ${c.kind === 'video' ? 'video' : 'voice'} call`, tag: 'call', renotify: true, requireInteraction: true, vibrate: [500, 250, 500, 250, 500], icon: pr?.avatar_url || 'icon-maskable-512.png' };
+-  try { const reg = await getSw(); if (reg) await reg.showNotification(nameOf(pr), opts); else new Notification(nameOf(pr), opts); } catch (e) {}
++  const opts = { body: 'Incoming call', tag: 'call', renotify: true, requireInteraction: true, icon: 'icon-maskable-512.png' };
++  if (S().notif.vibrate) opts.vibrate = [500, 250, 500, 250, 500];
++  try { const reg = await getSw(); if (reg) await reg.showNotification('Rada', opts); else new Notification('Rada', opts); } catch (e) {}
+ }
+ async function closeCallNotif() {
+   try { const reg = swReg || (await getSw()); (await reg.getNotifications({ tag: 'call' })).forEach((n) => n.close()); } catch (e) {}
+diff --git a/extras.js b/extras.js
+index bbcc102..aea664c 100644
+--- a/extras.js
++++ b/extras.js
+@@ -147,7 +147,7 @@ async function onNotif(n) {
+   notifs.unshift(n); refreshBell(); playReceive(); toast((n.type === 'update' ? '⬆ ' : '🔔 ') + n.title);
+   if (n.type === 'verification') { const { data } = await sb.from('profiles').select('*').eq('id', me.id).single(); if (data) { profiles[me.id] = data; renderAll(); } }
+   if (S().notif.updates && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
+-    try { const reg = await getSw(); const o = { body: n.body || '', icon: 'icon-maskable-512.png', tag: 'notif-' + n.id }; reg ? reg.showNotification(n.title, o) : new Notification(n.title, o); } catch (e) {}
++    try { const reg = await getSw(); const o = { body: 'New app notification', icon: 'icon-maskable-512.png', tag: 'rada-update' }; if (reg) await reg.showNotification('Rada', o); else new Notification('Rada', o); } catch (e) {}
+   }
+   if (!$('modal-notifs').classList.contains('hidden')) renderNotifs();
+ }
+@@ -308,11 +308,11 @@ function renderSettings() {
+         <p class="set-note">Pick a theme for a single chat with the 🎨 button inside that chat.</p>`;
+     } else if (settingsView === 'notif') {
+       const perm = 'Notification' in window ? Notification.permission : 'unsupported';
+-      h += `${sTog('notif.messages', 'Message notifications', 'Sound and alerts for new messages.', s.notif.messages)}
++      h += `${sTog('notif.messages', 'Message notifications', 'Sound and alerts for new messages. Muting applies while the app is open; closed-app push may still alert.', s.notif.messages)}
+         ${sTog('sound', 'Notification sounds', 'Play a tone when a message arrives or is sent.', soundOn())}
+-        ${sTog('notif.desktop', 'Alerts when app is in background', 'Browser permission: ' + perm + '.', s.notif.desktop)}
+-        ${sTog('notif.ringtone', 'Call ringtone', '', s.notif.ringtone)}
+-        ${sTog('notif.vibrate', 'Vibrate on calls', 'Phones only.', s.notif.vibrate)}
++        ${sTog('notif.desktop', 'Alerts when app is in background', 'Message alerts; calls may still alert. Browser permission: ' + perm + '.', s.notif.desktop)}
++        ${sTog('notif.ringtone', 'Call ringtone', 'Applies while the app is running; closed-app push may still alert.', s.notif.ringtone)}
++        ${sTog('notif.vibrate', 'Vibrate on calls', 'Phones only; closed-app push may still vibrate.', s.notif.vibrate)}
+         ${sTog('notif.updates', 'App update alerts', 'Banner and alert when the admins release an update.', s.notif.updates)}`;
+     } else if (settingsView === 'storage') {
+       h += `<div class="set-form"><p id="st-usage">Calculating storage used on this device…</p>
+diff --git a/menu.js b/menu.js
+index 50f6128..9cfb07e 100644
+--- a/menu.js
++++ b/menu.js
+@@ -275,7 +275,23 @@
+     for (const f of files) await sendMedia(f, kindOf(f), '');
+   };
+ 
+-  /* open ?chat=ID links (shortcut) once the app is ready */
+-  const want = new URLSearchParams(location.search).get('chat');
+-  if (want) { const t = setInterval(() => { if (typeof me !== 'undefined' && me && profiles[want]) { clearInterval(t); openChat(want); } }, 400); }
+-})();
+\ No newline at end of file
++  /* Queue notification links until authentication and profiles are ready. */
++  let pendingChat = null, chatTimer = null;
++  function queueChat(id) {
++    if (typeof id !== 'string' || !id || id.length > 256) return false;
++    pendingChat = id;
++    if (!chatTimer) chatTimer = setInterval(() => {
++      if (me && profiles[pendingChat]) {
++        const target = pendingChat;
++        pendingChat = null; clearInterval(chatTimer); chatTimer = null;
++        openChat(target);
++      }
++    }, 400);
++    return true;
++  }
++  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (event) => {
++    if (event.data?.type !== 'open-chat' || !queueChat(event.data.id)) return;
++    if (event.ports && event.ports[0]) event.ports[0].postMessage('queued');
++  });
++  queueChat(new URLSearchParams(location.search).get('chat'));
++})();
