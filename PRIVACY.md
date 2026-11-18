@@ -1,3 +1,5 @@
+> **ARCHIVAL: earlier proposal only.** The improved inactive review patches and test are in `review-artifacts/`; see the PR #3 description for exact instructions, test results, and current blockers. The earlier combined patch and its original test remain here for history and do not represent the improved proposal. Do not merge or deploy.
+
 # Privacy: INACTIVE, incomplete proposal and required server audit
 
 **INACTIVE / INCOMPLETE — DO NOT MERGE OR DEPLOY.** `app-privacy-INACTIVE.patch` contains proposed `app.js` and `extras.js` changes; it has NOT been applied to this branch. No security fixes in this proposal are live. The tests describe the patched local files and are not representative of the remote branch until the patch is applied. Backend permissions, realtime/storage authorization, and end-to-end behavior remain unverified. End-to-end encryption is not implemented by this proposal.
