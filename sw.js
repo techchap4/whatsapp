@@ -1,45 +1,20 @@
-/* Rada service worker:
-   1) makes the app installable + opens instantly / offline shell
-   2) shows "incoming call" notifications when the app is closed or in the background
-   3) shows "new message" notifications when the app is closed or in the background */
-const CACHE = 'rada-shell-v5';
-const SHELL = ['./', 'index.html', 'style.css', 'extras.css', 'app.js', 'extras.js', 'menu.js', 'features.js',
-  'config.js', 'pwa.js', 'manifest.json',
-  'icon.svg', 'icon-maskable-512.png'];
+/* Rada service worker. No requests or responses are stored in Cache Storage.
+   Only the app entry navigation gets a generic offline message; chat,
+   authentication, APIs, media and all other requests always use the network. */
+self.addEventListener('install', (e) => { e.waitUntil(self.skipWaiting()); });
+self.addEventListener('activate', (e) => { e.waitUntil(self.clients.claim()); });
 
-self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
-});
-self.addEventListener('activate', (e) => {
-  e.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
-    await self.clients.claim();
-  })());
-});
-
-// Network-first for our own files (so updates show up), cache as fallback when offline.
-// Supabase API / realtime / storage and everything else is never touched.
+// Exact app entry paths only, including deployments under a subdirectory.
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  if (req.method !== 'GET' || req.headers.has('range')) return;
+  if (req.method !== 'GET' || req.mode !== 'navigate') return;
   const url = new URL(req.url);
-  const sameOrigin = url.origin === self.location.origin;
-  const cdn = url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
-  if (!sameOrigin && !cdn) return;
-  e.respondWith((async () => {
-    const cache = await caches.open(CACHE);
-    try {
-      const res = await fetch(req);
-      if (res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone());
-      return res;
-    } catch (err) {
-      const hit = await cache.match(req, { ignoreSearch: true });
-      if (hit) return hit;
-      if (req.mode === 'navigate') { const shell = await cache.match('index.html'); if (shell) return shell; }
-      throw err;
-    }
-  })());
+  const scope = new URL(self.registration.scope);
+  if (url.origin !== scope.origin || (url.pathname !== scope.pathname && url.pathname !== scope.pathname + 'index.html')) return;
+  e.respondWith(fetch(req).catch(() => new Response(
+    '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rada is offline</title><body><main><h1>Rada is offline</h1><p>Connect to the internet and try again. Chats and calls are not available offline.</p><p><a href="./">Try again</a></p></main></body></html>',
+    { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } }
+  )));
 });
 
 self.addEventListener('push', (event) => {
