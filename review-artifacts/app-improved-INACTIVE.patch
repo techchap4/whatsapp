@@ -1,0 +1,132 @@
+diff --git a/app.js b/app.js
+index 9522694..fad76c4 100644
+--- a/app.js
++++ b/app.js
+@@ -10,6 +10,8 @@ const $ = (id) => document.getElementById(id);
+ let me = null;               // auth user
+ let profiles = {};           // id -> profile
+ let messages = [];           // all my messages (ascending)
++let locallySeen = new Set();  // session-only unread indicators, not server receipts
++let pendingReceipts = new Set();
+ let statuses = [];           // statuses from the last 24h (ascending)
+ let activeId = null;         // open chat partner id
+ let online = new Set();      // ids currently online
+@@ -194,7 +196,7 @@ async function start(user) {
+ }
+ function stop() {
+   stopCalls(); stopExtras(); stopLastSeen();
+-  started = false; me = null; profiles = {}; messages = []; statuses = []; activeId = null; statusViews = {}; clearInterval(pruneTimer);
++  started = false; me = null; profiles = {}; messages = []; locallySeen = new Set(); pendingReceipts = new Set(); statuses = []; activeId = null; statusViews = {}; clearInterval(pruneTimer);
+   if (realtimeCh) sb.removeChannel(realtimeCh);
+   if (presenceCh) sb.removeChannel(presenceCh);
+   realtimeCh = presenceCh = null;
+@@ -219,9 +221,10 @@ async function loadProfiles() {
+   }
+ }
+ async function loadMessages() {
+-  const { data, error } = await sb.from('messages').select('*').order('created_at', { ascending: true }).limit(3000);
++  const user = me, userId = user.id;
++  const { data, error } = await sb.from('messages').select('*').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`).order('created_at', { ascending: true }).limit(3000);
+   if (error) return console.error(error);
+-  messages = data;
++  if (me === user) messages = (data || []).filter((m) => m.sender_id === userId || m.receiver_id === userId);
+ }
+ async function loadStatuses() {
+   const since = new Date(Date.now() - DAY_MS).toISOString();
+@@ -246,12 +249,18 @@ async function loadViews() {
+ 
+ /* ---------------- realtime ---------------- */
+ function subscribe() {
++  const subscribedUser = me;
++  const updateMessage = (p) => {
++    if (me !== subscribedUser || !p.new || (p.new.sender_id !== me.id && p.new.receiver_id !== me.id)) return;
++    const i = messages.findIndex((m) => m.id === p.new.id);
++    if (i >= 0) { messages[i] = p.new; renderList(); updateTitle(); if (activeId) renderMessages(false); }
++  };
++  const insertMessage = (p) => { if (me === subscribedUser) onMessage(p.new); };
+   realtimeCh = sb.channel('db-changes')
+-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p) => onMessage(p.new))
+-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (p) => {
+-      const i = messages.findIndex((m) => m.id === p.new.id);
+-      if (i >= 0) { messages[i] = p.new; renderList(); if (activeId) renderMessages(false); }
+-    })
++    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'sender_id=eq.' + me.id }, insertMessage)
++    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'receiver_id=eq.' + me.id }, insertMessage)
++    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: 'sender_id=eq.' + me.id }, updateMessage)
++    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: 'receiver_id=eq.' + me.id }, updateMessage)
+     .on('postgres_changes', { event: '*', schema: 'public', table: 'statuses' }, () => loadStatuses())
+     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'status_views' }, () => loadViews())
+     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (p) => {
+@@ -276,6 +285,7 @@ function subscribe() {
+ }
+ 
+ function onMessage(m) {
++  if (!me || !m || (m.sender_id !== me.id && m.receiver_id !== me.id)) return;
+   if (messages.some((x) => x.id === m.id)) return;
+   messages.push(m);
+   const incoming = m.receiver_id === me.id;
+@@ -295,7 +305,7 @@ function desktopNotify(m) {
+   try { new Notification(nameOf(p), { body: previewText(m), icon: p?.avatar_url || undefined }); } catch (e) {}
+ }
+ function unreadCount(from) {
+-  return messages.filter((m) => m.receiver_id === me.id && !m.read && (!from || m.sender_id === from)).length;
++  return messages.filter((m) => m.receiver_id === me.id && !m.read && !locallySeen.has(m.id) && (!from || m.sender_id === from)).length;
+ }
+ function updateTitle() {
+   const n = unreadCount();
+@@ -303,11 +313,42 @@ function updateTitle() {
+   const b = $('unread-total'); b.textContent = n; b.classList.toggle('hidden', !n);
+ }
+ async function markRead(otherId) {
+-  const ids = messages.filter((m) => m.sender_id === otherId && m.receiver_id === me.id && !m.read);
+-  if (!ids.length) return;
+-  ids.forEach((m) => (m.read = true));
+-  await sb.from('messages').update({ read: true }).eq('sender_id', otherId).eq('receiver_id', me.id).eq('read', false);
++  if (!me) return;
++  const user = me, seen = locallySeen, pending = pendingReceipts;
++  const unread = messages.filter((m) => m.sender_id === otherId && m.receiver_id === user.id && !m.read);
++  if (!unread.length) return;
++  unread.forEach((m) => seen.add(m.id));
+   renderList(); updateTitle();
++  // Seen state is separate from the server flag, so enabling receipts later
++  // can still send receipts for messages seen while the setting was off.
++  if (!profiles[user.id] || S().privacy.receipts === false) return;
++  const ids = unread.map((m) => m.id).filter((id) => !pending.has(id));
++  if (!ids.length) return;
++  ids.forEach((id) => pending.add(id));
++  try {
++    // Restrict the write to messages actually observed, not newer arrivals.
++    const { data, error } = await sb.from('messages').update({ read: true })
++      .eq('sender_id', otherId).eq('receiver_id', user.id).eq('read', false).in('id', ids).select('id');
++    if (error) throw error;
++    const confirmed = new Set((data || []).map((m) => m.id));
++    if (me !== user) return;
++    for (const id of ids) {
++      const message = messages.find((m) => m.id === id);
++      if (confirmed.has(id)) { if (message) message.read = true; }
++      else if (message && !message.read) seen.delete(id);
++    }
++  } catch (error) {
++    if (me === user) {
++      for (const id of ids) {
++        const message = messages.find((m) => m.id === id);
++        if (message && !message.read) seen.delete(id);
++      }
++      console.error('Could not send read receipt', error);
++    }
++  } finally {
++    ids.forEach((id) => pending.delete(id));
++    if (me === user) { renderList(); updateTitle(); }
++  }
+ }
+ document.addEventListener('visibilitychange', () => { if (!document.hidden && activeId && me) markRead(activeId); });
+ 
+@@ -333,7 +374,7 @@ function conversations() {
+     const other = m.sender_id === me.id ? m.receiver_id : m.sender_id;
+     map[other] = map[other] || { id: other, unread: 0 };
+     map[other].last = m;
+-    if (m.receiver_id === me.id && !m.read) map[other].unread++;
++    if (m.receiver_id === me.id && !m.read && !locallySeen.has(m.id)) map[other].unread++;
+   }
+   return Object.values(map).sort((a, b) => new Date(b.last.created_at) - new Date(a.last.created_at));
+ }
