@@ -73,7 +73,7 @@ const playReceive = () => {
   if (!soundOn()) return;
   try {
     if (!window.RadaSounds) return defaultReceive();
-    Promise.resolve(window.RadaSounds.play(defaultReceive)).catch(() => {});
+    Promise.resolve(window.RadaSounds.play(defaultReceive, audio)).catch(() => {});
   } catch (e) { /* playback/storage failure must not interrupt chat */ }
 };
 const playSend = () => { if (soundOn()) tone(620, 0, 0.1, 0.1); };

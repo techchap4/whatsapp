@@ -13,21 +13,22 @@ extras = (ROOT / 'extras.js').read_text()
 sound_code = app[app.index('let ac = null;'):app.index('/* ---------------- auth screen')]
 settings_code = extras[extras.index('let settingsView = '):]
 assert "const playSend = () => { if (soundOn()) tone(620, 0, 0.1, 0.1); };" in sound_code
-harness = '''<!doctype html><html><body><div id="pane-settings"></div><script src="/local-sounds.js"></script><script>
+harness = '''<!doctype html><html><body><div id="pane-settings"></div><script src="/original-tones.js"></script><script src="/local-sounds.js"></script><script>
 const $ = id => document.getElementById(id);
 let me = {id:'test',email:'test@example.invalid'}, profiles = {test:{username:'test'}}, myBlocks=new Set(), messages=[];
-let stats=[]; class FakeAC { constructor(){this.state='running';this.currentTime=0;this.destination={};} resume(){} createOscillator(){return {frequency:{value:0},connect(){},start(){stats.push(this.frequency.value)},stop(){}}} createGain(){return {connect(){},gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}}}} }; window.AudioContext=FakeAC;
+let stats=[]; class FakeAC { constructor(){this.state='running';this.currentTime=0;this.destination={};} resume(){} createOscillator(){let f={value:0,setValueAtTime(v){this.value=v},exponentialRampToValueAtTime(v){this.end=v}}; return {frequency:f,connect(){},start(){stats.push(f.value)},stop(){}}} createGain(){return {connect(){},gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}}}} }; window.AudioContext=FakeAC;
 const s={notif:{messages:true,desktop:false,ringtone:true,vibrate:false,updates:true},privacy:{},chats:{}};
 let switchTab=()=>{}; const S=()=>s, saveSettings=async fn=>{fn(s);return true}, THEMES=[], avatar=()=>'', esc=x=>x, nameOf=p=>p.username, vb=()=>'', verifCard=()=>'', openVerify=()=>{}, toast=()=>{}, registerPush=()=>{};
 window.played=[]; const originalPlay=HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play=function(){window.played.push(this.src); return originalPlay.call(this)};
 ''' + sound_code + settings_code + '''
 settingsView='notif'; renderSettings();
 </script></body></html>'''
+real_harness = harness.replace(harness[harness.index('let stats=[]; class FakeAC'):harness.index('const s={notif:')], 'let stats=[];\n')
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw): super().__init__(*a, directory=str(ROOT), **kw)
     def do_GET(self):
-        if self.path == '/harness':
-            data=harness.encode(); self.send_response(200); self.send_header('Content-Type','text/html'); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data)
+        if self.path in ('/harness', '/realharness'):
+            data=(harness if self.path == '/harness' else real_harness).encode(); self.send_response(200); self.send_header('Content-Type','text/html'); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data)
         else: super().do_GET()
     def log_message(self, *args): pass
 server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
@@ -50,17 +51,44 @@ try:
     page.on('request',lambda r:requests.append((r.method, r.url)))
     page.goto(url+'/harness'); active=page.locator('#local-sound-active'); name=page.locator('#local-sound-name'); status=page.locator('#local-sound-status')
     expect(active).to_have_value('default')
-    expect(page.locator('#local-sound-active option[value=Bottle]')).to_be_disabled()
     assert page.locator('#local-sound-active option').count()==21
+    expect(page.locator('#local-sound-active option[value=Bottle]')).to_be_enabled()
+    assert 'not Xiaomi' in page.locator('#pane-settings').inner_text()
     page.evaluate('playReceive(); playSend()'); assert page.evaluate('stats') == [880,1175,620]
-    # File is generated locally, never shipped as a product sound.
+    # Render actual oscillator graphs in OfflineAudioContext; assert nonzero and different
+    # PCM samples for all 19, without relying on fake oscillators or copyrighted audio.
+    rendered=page.evaluate("""async () => {
+      const out={};
+      for (const n of RadaOriginalTones.names) {
+        const c=new OfflineAudioContext(1, 48000, 48000);
+        RadaOriginalTones.play(c,n);
+        const data=(await c.startRendering()).getChannelData(0);
+        let power=0, hash=2166136261;
+        for (const v of data) {power+=v*v; hash=Math.imul(hash ^ Math.round(v*1e6),16777619)}
+        out[n]={power,hash:hash>>>0};
+      }
+      return out;
+    }""")
+    assert len(rendered)==19 and all(x['power']>0.01 for x in rendered.values()),rendered
+    assert len({x['hash'] for x in rendered.values()})==19,rendered
+    names=list(rendered)
+    # All options selectable and persisted, user-gesture preview schedules intended notes,
+    # and each incoming selection schedules the same first frequency as preview.
+    for n in names:
+      active.select_option(n); page.evaluate('stats=[]')
+      page.locator('#local-sound-preview').click(); expect(status).to_have_text('Preview started.')
+      preview=page.evaluate('stats.slice()'); assert preview, n
+      page.evaluate('stats=[]; playReceive()'); page.wait_for_function('stats.length>0')
+      assert page.evaluate('stats')==preview,n
+      page.reload(); expect(active).to_have_value(n)
+    # File override and playback, then delete restores original without losing selection.
     name.select_option('Bottle'); page.locator('#local-sound-file').set_input_files({'name':'dummy.wav','mimeType':'audio/wav','buffer':wav_bytes()})
     page.locator('#local-sound-import').click(); expect(status).to_contain_text('saved locally')
-    expect(page.locator('#local-sound-active option[value=Bottle]')).to_be_enabled()
-    active.select_option('Bottle'); page.locator('#local-sound-preview').click(); expect(status).to_have_text('Preview finished.',timeout=5000)
-    assert page.evaluate('played.length')==1
+    active.select_option('Bottle'); page.evaluate('stats=[]; played=[]')
+    page.locator('#local-sound-preview').click(); expect(status).to_have_text('Preview started.',timeout=5000)
+    assert page.evaluate('played.length')==1 and page.evaluate('stats.length')==0
     page.evaluate('playReceive()'); page.wait_for_function('played.length===2')
-    page.reload(); expect(active).to_have_value('Bottle'); expect(page.locator('#local-sound-active option[value=Bottle]')).to_be_enabled()
+    page.reload(); expect(active).to_have_value('Bottle')
     page.locator('[data-k=sound]').uncheck(); page.evaluate('stats=[]; played=[]; playReceive(); playSend()'); page.wait_for_timeout(250)
     assert page.evaluate('stats.length===0 && played.length===0')
     page.locator('#local-sound-preview').click(); expect(status).to_contain_text('Turn on')
@@ -68,16 +96,29 @@ try:
     page.evaluate('stats=[]; played=[]'); active.select_option('none'); page.evaluate('playReceive(); playSend()'); page.wait_for_timeout(250)
     assert page.evaluate('stats')==[620] and page.evaluate('played.length')==0
     page.locator('#local-sound-preview').click(); expect(status).to_contain_text('silent')
-    active.select_option('Bottle'); name.select_option('Bottle'); page.locator('#local-sound-delete').click(); expect(active).to_have_value('default'); expect(page.locator('#local-sound-active option[value=Bottle]')).to_be_disabled()
-    page.reload(); expect(active).to_have_value('default')
-    # Corrupt file must not throw unhandled errors or stop the chat code.
+    active.select_option('Bottle'); name.select_option('Bottle'); page.locator('#local-sound-delete').click(); expect(active).to_have_value('Bottle'); expect(status).to_contain_text('original alternative')
+    page.evaluate('stats=[]'); page.locator('#local-sound-preview').click(); expect(status).to_have_text('Preview started.'); assert page.evaluate('stats.length')>0
+    page.reload(); expect(active).to_have_value('Bottle')
+    # Corrupt override falls back to original; no uncaught error or network upload.
     name.select_option('Bubble'); page.locator('#local-sound-file').set_input_files({'name':'bad.wav','mimeType':'audio/wav','buffer':b'bad audio'})
     page.locator('#local-sound-import').click(); expect(status).to_contain_text('saved locally'); active.select_option('Bubble')
-    page.locator('#local-sound-preview').click(); expect(status).to_contain_text('browser',timeout=5000)
+    page.evaluate('stats=[]'); page.locator('#local-sound-preview').click(); expect(status).to_contain_text('original alternative',timeout=5000); assert page.evaluate('stats.length')>0
     page.evaluate('playReceive(); playSend()'); page.wait_for_timeout(300)
+    # Blocked Web Audio must not be falsely reported as successful.
+    page.evaluate("ac.state='suspended'"); page.locator('#local-sound-preview').click(); expect(status).to_contain_text('blocked')
+    page.evaluate("ac.state='running'")
     assert not errors, errors
     assert all(method == 'GET' and (r.startswith(url) or r.startswith('blob:'+url)) for method, r in requests), requests
-    print('PASS: initial default, 19 missing names, real dummy WAV import and playback, incoming selection and reload persistence, mute/preview, None, unchanged send tone, deletion, invalid playback handling, no network upload.')
-    context.close(); browser.close()
+    print('PASS: 19 unique non-silent actual offline PCM renders; 19 selectable previews, incoming matching and reload persistence; custom override, delete/corrupt fallback, mute, None, unchanged default/send, blocked audio and no uploads.')
+    context.close()
+    # Real AudioContext (not the fake scheduler) with a mobile-sized/touch browser.
+    mobile=browser.new_context(viewport={'width':390,'height':844},has_touch=True,is_mobile=True)
+    mp=mobile.new_page(); mp.goto(url+'/realharness')
+    mp.locator('#local-sound-active').select_option('Chirp')
+    mp.locator('#local-sound-preview').click()
+    expect(mp.locator('#local-sound-status')).to_have_text('Preview started.')
+    assert mp.evaluate('ac.state') == 'running'
+    print('PASS: real AudioContext preview after a user gesture in mobile-emulated Chromium.')
+    mobile.close(); browser.close()
 finally:
     server.shutdown()
