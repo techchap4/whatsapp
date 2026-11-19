@@ -1,6 +1,8 @@
 # Privacy rollout: draft; not a complete fix
 
-This branch limits direct-message queries and realtime subscriptions to the signed-in participant and rejects unexpected/stale responses locally. It clarifies privacy settings and that read updates still happen. This is defense in depth, not authorization: modified or older clients bypass it. It does not fix public file exposure, notification previews, read receipts, profile/presence access, blocks, backend policies, or end-to-end encryption. Do not share sensitive files yet.
+**INACTIVE: DO NOT MERGE OR DEPLOY.** Runtime files on this branch are unchanged; proposed actual code is in `client-scope-INACTIVE.patch`, and `test-message-scope.cjs` targets that patch after it is applied in an isolated checkout. Publishing the full runtime files was blocked by the repository connector's request-size/encoding limit. No safeguards are live from this branch.
+
+The patch limits direct-message queries and realtime subscriptions to the signed-in participant and rejects unexpected/stale responses locally. It clarifies privacy settings and that read updates still happen. This is defense in depth, not authorization: modified or older clients bypass it. It does not fix public file exposure, notification previews, read receipts, profile/presence access, blocks, backend policies, or end-to-end encryption. Do not share sensitive files yet.
 
 ## Existing media dependencies
 
