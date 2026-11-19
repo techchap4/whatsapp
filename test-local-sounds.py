@@ -49,7 +49,7 @@ try:
     page=context.new_page(); errors=[]; requests=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.on('request',lambda r:requests.append((r.method, r.url)))
-    page.goto(url+'/harness'); active=page.locator('#local-sound-active'); name=page.locator('#local-sound-name'); status=page.locator('#local-sound-status')
+    page.goto(url+'/harness'); active=page.locator('#local-sound-active'); status=page.locator('#local-sound-status')
     expect(active).to_have_value('default')
     assert page.locator('#local-sound-active option').count()==21
     expect(page.locator('#local-sound-active option[value=Bottle]')).to_be_enabled()
@@ -81,35 +81,25 @@ try:
       page.evaluate('stats=[]; playReceive()'); page.wait_for_function('stats.length>0')
       assert page.evaluate('stats')==preview,n
       page.reload(); expect(active).to_have_value(n)
-    # File override and playback, then delete restores original without losing selection.
-    name.select_option('Bottle'); page.locator('#local-sound-file').set_input_files({'name':'dummy.wav','mimeType':'audio/wav','buffer':wav_bytes()})
-    page.locator('#local-sound-import').click(); expect(status).to_contain_text('saved locally')
-    active.select_option('Bottle'); page.evaluate('stats=[]; played=[]')
-    page.locator('#local-sound-preview').click(); expect(status).to_have_text('Preview started.',timeout=5000)
-    assert page.evaluate('played.length')==1 and page.evaluate('stats.length')==0
-    page.evaluate('playReceive()'); page.wait_for_function('played.length===2')
-    page.reload(); expect(active).to_have_value('Bottle')
-    page.locator('[data-k=sound]').uncheck(); page.evaluate('stats=[]; played=[]; playReceive(); playSend()'); page.wait_for_timeout(250)
-    assert page.evaluate('stats.length===0 && played.length===0')
+    active.select_option('Bottle'); page.reload(); expect(active).to_have_value('Bottle')
+    page.locator('[data-k=sound]').uncheck(); page.evaluate('stats=[]; playReceive(); playSend()'); page.wait_for_timeout(250)
+    assert page.evaluate('stats.length===0')
     page.locator('#local-sound-preview').click(); expect(status).to_contain_text('Turn on')
     page.locator('[data-k=sound]').check(); page.wait_for_timeout(300)
-    page.evaluate('stats=[]; played=[]'); active.select_option('none'); page.evaluate('playReceive(); playSend()'); page.wait_for_timeout(250)
-    assert page.evaluate('stats')==[620] and page.evaluate('played.length')==0
+    page.evaluate('stats=[]'); active.select_option('none'); page.evaluate('playReceive(); playSend()'); page.wait_for_timeout(250)
+    assert page.evaluate('stats')==[620]
     page.locator('#local-sound-preview').click(); expect(status).to_contain_text('silent')
-    active.select_option('Bottle'); name.select_option('Bottle'); page.locator('#local-sound-delete').click(); expect(active).to_have_value('Bottle'); expect(status).to_contain_text('original alternative')
-    page.evaluate('stats=[]'); page.locator('#local-sound-preview').click(); expect(status).to_have_text('Preview started.'); assert page.evaluate('stats.length')>0
-    page.reload(); expect(active).to_have_value('Bottle')
-    # Corrupt override falls back to original; no uncaught error or network upload.
-    name.select_option('Bubble'); page.locator('#local-sound-file').set_input_files({'name':'bad.wav','mimeType':'audio/wav','buffer':b'bad audio'})
-    page.locator('#local-sound-import').click(); expect(status).to_contain_text('saved locally'); active.select_option('Bubble')
-    page.evaluate('stats=[]'); page.locator('#local-sound-preview').click(); expect(status).to_contain_text('original alternative',timeout=5000); assert page.evaluate('stats.length')>0
-    page.evaluate('playReceive(); playSend()'); page.wait_for_timeout(300)
-    # Blocked Web Audio must not be falsely reported as successful.
-    page.evaluate("ac.state='suspended'"); page.locator('#local-sound-preview').click(); expect(status).to_contain_text('blocked')
-    page.evaluate("ac.state='running'")
+    # Missing synthesizer falls back to the existing receive tone.
+    active.select_option('Bottle'); page.evaluate('stats=[]; window.savedOriginal=window.RadaOriginalTones; window.RadaOriginalTones=null; playReceive()')
+    page.wait_for_function('stats.length===2'); assert page.evaluate('stats') == [880,1175]
+    page.evaluate('window.RadaOriginalTones=window.savedOriginal')
+    # Do not play if muted while awaiting audio activation.
+    page.evaluate("stats=[]; ac.state='suspended'; ac.resume=()=>new Promise(r=>window.finishResume=r); playReceive(); localStorage.setItem('chat-sound','off'); ac.state='running'; finishResume()")
+    page.wait_for_timeout(200); assert page.evaluate('stats.length')==0
+    page.evaluate("localStorage.setItem('chat-sound','on'); ac.state='running'")
     assert not errors, errors
-    assert all(method == 'GET' and (r.startswith(url) or r.startswith('blob:'+url)) for method, r in requests), requests
-    print('PASS: 19 unique non-silent actual offline PCM renders; 19 selectable previews, incoming matching and reload persistence; custom override, delete/corrupt fallback, mute, None, unchanged default/send, blocked audio and no uploads.')
+    assert all(method == 'GET' and r.startswith(url) for method, r in requests), requests
+    print('PASS: 19 unique non-silent PCM renders; previews, incoming playback, persistence, mute, None, unchanged default/send, missing-synth fallback, playback race, and no uploads.')
     context.close()
     # Real AudioContext (not the fake scheduler) with a mobile-sized/touch browser.
     mobile=browser.new_context(viewport={'width':390,'height':844},has_touch=True,is_mobile=True)
