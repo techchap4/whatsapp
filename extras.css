@@ -38,3 +38,7 @@
 .ban-card{background:#fff;color:#111b21;border-radius:16px;padding:1.5rem;max-width:380px;width:100%;display:flex;flex-direction:column;gap:.7rem;text-align:center}
 .ban-card textarea{padding:.6rem;border-radius:8px;border:1px solid #ccc;font:inherit}.ban-ic{font-size:2.6rem}.ban-card h2{margin:0}.ban-card p{margin:0}
 .ban-card .ghost{background:none;border:0;color:#555;cursor:pointer;padding:.4rem}
+/* Keep mobile navigation visible with long chat previews. */
+.sidebar{min-width:0}
+.tabs{flex-shrink:0}
+@media (max-width:760px){#app{grid-template-columns:minmax(0,1fr)}}
