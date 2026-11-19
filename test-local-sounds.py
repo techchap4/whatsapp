@@ -43,11 +43,11 @@ def wav_bytes():
 
 try:
   with sync_playwright() as p:
-    browser=p.chromium.launch(headless=True,executable_path=os.environ.get('CHROMIUM','/usr/bin/chromium'),args=['--no-sandbox','--autoplay-policy=no-user-gesture-required'])
+    browser=p.chromium.launch(headless=True,executable_path=os.environ.get('CHROMIUM','/usr/bin/chromium'),args=['--no-sandbox'])
     context=browser.new_context()
     page=context.new_page(); errors=[]; requests=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
-    page.on('request',lambda r:requests.append(r.url))
+    page.on('request',lambda r:requests.append((r.method, r.url)))
     page.goto(url+'/harness'); active=page.locator('#local-sound-active'); name=page.locator('#local-sound-name'); status=page.locator('#local-sound-status')
     expect(active).to_have_value('default')
     expect(page.locator('#local-sound-active option[value=Bottle]')).to_be_disabled()
@@ -76,7 +76,7 @@ try:
     page.locator('#local-sound-preview').click(); expect(status).to_contain_text('browser',timeout=5000)
     page.evaluate('playReceive(); playSend()'); page.wait_for_timeout(300)
     assert not errors, errors
-    assert all(r.startswith(url) or r.startswith('blob:'+url) for r in requests), requests
+    assert all(method == 'GET' and (r.startswith(url) or r.startswith('blob:'+url)) for method, r in requests), requests
     print('PASS: initial default, 19 missing names, real dummy WAV import and playback, incoming selection and reload persistence, mute/preview, None, unchanged send tone, deletion, invalid playback handling, no network upload.')
     context.close(); browser.close()
 finally:
