@@ -14,6 +14,7 @@ Unlink immediately drops local access, tries library logout, and tells the teste
 
 ```
 cd whatsapp-link-lab
+cat lock.gz.b64.part00 lock.gz.b64.part01 lock.gz.b64.part02 | base64 -d | gzip -d > pnpm-lock.yaml
 corepack pnpm install --frozen-lockfile --ignore-scripts
 corepack pnpm test
 cd ..
@@ -24,7 +25,7 @@ Tests use fake sockets, fake chat content, and fake authentication—not live Wh
 
 ## Isolated lab setup (for a developer, no real account yet)
 
-1. Use a disposable machine/worktree, a **separate** empty Supabase staging project and staging Rada user. Never point this lab to the production project. Set that separate project's public URL/anon key in the local-only copy of `config.js`, and add `window.RADA_WA_LAB = true;` there. Do not commit this local configuration. It enables the menu item only on `http://127.0.0.1` or `http://localhost` and makes Supabase auth nonpersistent for that local lab.
+1. Use a disposable machine/worktree, a **separate** empty Supabase staging project and staging Rada user. Never point this lab to the production project. In the isolated copy only, run `git apply whatsapp-link-lab/frontend-staging.patch` to wire the disabled-by-default UI and memory-only lab authentication into the app. Set that separate project's public URL/anon key in the local-only copy of `config.js`, and add `window.RADA_WA_LAB = true;` there. Do not commit these local changes. The opt-in enables the menu item only on `http://127.0.0.1` or `http://localhost` and makes Supabase auth nonpersistent for that local lab.
 2. Install Node >=20.19 and Corepack/pnpm. Run the commands above. Serve the local copy from `127.0.0.1:8000` (for example, `python -m http.server 8000 --bind 127.0.0.1` from the repository root). Do not use a public tunnel or forward either port. The app origin must be exactly `http://127.0.0.1:8000`.
 3. In a separate local shell, privately set `STAGING_SUPABASE_URL` and `STAGING_SUPABASE_ANON_KEY` to the separate project's public values, and set `STAGING_APP_ORIGIN=http://127.0.0.1:8000`. From `whatsapp-link-lab`, start `corepack pnpm start`. It binds **only** `127.0.0.1:8787`. Never use a service-role key. Avoid putting any credentials or tokens in shell history or shared configuration.
 4. Sign in to the disposable staging Rada user locally and open the experimental menu. The opt-in and authentication can be checked without linking any real WhatsApp account. Only after separate approval, a controlled test with a disposable WhatsApp account and two different staging users could test pairing, text receipt, logout and cross-user access. The tester enters the transient code into WhatsApp itself, never into chat or logs. Remove the device in WhatsApp when done and shut down both processes.
