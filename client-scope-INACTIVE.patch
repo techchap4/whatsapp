@@ -1,0 +1,65 @@
+diff --git a/app.js b/app.js
+index 9522694..aff3603 100644
+--- a/app.js
++++ b/app.js
+@@ -219,9 +219,10 @@ async function loadProfiles() {
+   }
+ }
+ async function loadMessages() {
+-  const { data, error } = await sb.from('messages').select('*').order('created_at', { ascending: true }).limit(3000);
++  const user = me, userId = user.id;
++  const { data, error } = await sb.from('messages').select('*').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`).order('created_at', { ascending: true }).limit(3000);
+   if (error) return console.error(error);
+-  messages = data;
++  if (me === user) messages = (data || []).filter((m) => m.sender_id === userId || m.receiver_id === userId);
+ }
+ async function loadStatuses() {
+   const since = new Date(Date.now() - DAY_MS).toISOString();
+@@ -246,12 +247,18 @@ async function loadViews() {
+ 
+ /* ---------------- realtime ---------------- */
+ function subscribe() {
++  const subscribedUser = me;
++  const updateMessage = (p) => {
++    if (me !== subscribedUser || !p.new || (p.new.sender_id !== me.id && p.new.receiver_id !== me.id)) return;
++    const i = messages.findIndex((m) => m.id === p.new.id);
++    if (i >= 0) { messages[i] = p.new; renderList(); if (activeId) renderMessages(false); }
++  };
++  const insertMessage = (p) => { if (me === subscribedUser) onMessage(p.new); };
+   realtimeCh = sb.channel('db-changes')
+-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p) => onMessage(p.new))
+-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (p) => {
+-      const i = messages.findIndex((m) => m.id === p.new.id);
+-      if (i >= 0) { messages[i] = p.new; renderList(); if (activeId) renderMessages(false); }
+-    })
++    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'sender_id=eq.' + me.id }, insertMessage)
++    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'receiver_id=eq.' + me.id }, insertMessage)
++    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: 'sender_id=eq.' + me.id }, updateMessage)
++    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: 'receiver_id=eq.' + me.id }, updateMessage)
+     .on('postgres_changes', { event: '*', schema: 'public', table: 'statuses' }, () => loadStatuses())
+     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'status_views' }, () => loadViews())
+     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (p) => {
+@@ -276,6 +283,7 @@ function subscribe() {
+ }
+ 
+ function onMessage(m) {
++  if (!me || !m || (m.sender_id !== me.id && m.receiver_id !== me.id)) return;
+   if (messages.some((x) => x.id === m.id)) return;
+   messages.push(m);
+   const incoming = m.receiver_id === me.id;
+diff --git a/extras.js b/extras.js
+index bbcc102..5f64296 100644
+--- a/extras.js
++++ b/extras.js
+@@ -295,9 +295,9 @@ function renderSettings() {
+         <p id="set-msg" class="auth-msg"></p>`;
+       // the verification card button lives in this view too
+     } else if (settingsView === 'privacy') {
+-      h += `<p class="set-note">Choose who can see your information. "My chats" means people you have exchanged messages with.</p>
++      h += `<p class="set-note">These settings affect how this app displays information, but do not guarantee privacy from other clients or direct access. Chat file links may be public. Avoid sharing sensitive files until server protections are verified. "My chats" means people you have exchanged messages with.</p>
+         ${sSel('privacy.online', 'Last seen and online', WHO, s.privacy.online)}${sSel('privacy.photo', 'Profile photo', WHO, s.privacy.photo)}${sSel('privacy.about', 'About', WHO, s.privacy.about)}
+-        ${sTog('privacy.receipts', 'Read receipts', 'If off, you will not send or see blue ticks.', s.privacy.receipts)}
++        ${sTog('privacy.receipts', 'Read receipts', 'This setting affects tick display but does not stop the app sending read updates.', s.privacy.receipts)}
+         ${sRow('blocked', '⛔', 'Blocked contacts', myBlocks.size ? myBlocks.size + ' blocked' : 'None')}`;
+     } else if (settingsView === 'blocked') {
+       h += myBlocks.size ? [...myBlocks].map((id) => `<div class="item">${avatar(profiles[id], 'sm')}<div class="body"><div class="top"><span class="name">${esc(nameOf(profiles[id]))}</span></div></div><button class="mini" data-unblock="${id}" type="button">Unblock</button></div>`).join('') : '<div class="empty-note">You have not blocked anyone.</div>';
