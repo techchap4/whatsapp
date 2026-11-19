@@ -1,3 +1,37 @@
+/* Review-only WhatsApp link preview. No connection or data collection. */
+(() => {
+  const menu = document.getElementById('top-menu');
+  const more = document.getElementById('btn-topmore');
+  if (!menu || !more) return;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    #whatsapp-link-preview{position:fixed;inset:0;margin:auto;border:0;color:var(--ink);padding:0;box-shadow:var(--shadow)}
+    #whatsapp-link-preview:not([open]){display:none}
+    #whatsapp-link-preview::backdrop{background:rgba(0,0,0,.45)}
+    #whatsapp-link-preview .preview-body{padding:16px}
+    #whatsapp-link-preview button:disabled{opacity:.5;cursor:not-allowed}
+  `;
+  document.head.appendChild(style);
+  const dialog = document.createElement('dialog');
+  dialog.id = 'whatsapp-link-preview';
+  dialog.className = 'modal-card';
+  dialog.setAttribute('aria-labelledby', 'whatsapp-link-title');
+  dialog.setAttribute('aria-describedby', 'whatsapp-link-description');
+  dialog.innerHTML = `<header><button class="close" type="button" aria-label="Close WhatsApp link preview">✕</button><h3 id="whatsapp-link-title">Link WhatsApp — preview</h3></header>
+    <div class="preview-body"><p id="whatsapp-link-description">WhatsApp linking is not yet available. This preview connects no WhatsApp accounts and collects no chats or pairing codes.</p>
+    <button class="primary" type="button" disabled>Link WhatsApp</button></div>`;
+  document.body.appendChild(dialog);
+  const close = dialog.querySelector('.close');
+  close.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('close', () => more.focus());
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = 'Link WhatsApp (preview)';
+  button.addEventListener('click', () => { menu.classList.add('hidden'); dialog.showModal(); close.focus(); });
+  menu.insertBefore(button, menu.querySelector('[data-go="settings"]'));
+})();
+
 /* Rada PWA: install button (browser only), service worker, phone-friendly behaviour */
 (() => {
   const $ = (id) => document.getElementById(id);
