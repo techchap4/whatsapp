@@ -1,0 +1,30 @@
+diff --git a/app.js b/app.js
+index 9522694..4c4f969 100644
+--- a/app.js
++++ b/app.js
+@@ -1,9 +1,10 @@
+ /* ============================================================
+    Rada - WhatsApp-style chat on Supabase
+    ============================================================ */
+-// persistSession keeps the login in the phone's storage, so users stay signed in (like WhatsApp)
++// Keep existing production behaviour; the explicitly enabled local lab uses memory-only auth.
++const waLocalLab = window.RADA_WA_LAB === true && location.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(location.hostname);
+ const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
++  auth: { persistSession: !waLocalLab, autoRefreshToken: true, detectSessionInUrl: !waLocalLab }
+ });
+ const $ = (id) => document.getElementById(id);
+ 
+diff --git a/index.html b/index.html
+index e93e73a..d0179b2 100644
+--- a/index.html
++++ b/index.html
+@@ -313,6 +313,8 @@
+ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+ <script src="config.js"></script>
+ <script src="app.js"></script>
++<!-- Disabled unless explicitly enabled in a loopback-only staging copy. -->
++<script src="whatsapp-link-lab/ui.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> <!-- skip if you already load it -->
+ <script src="whatsapp-inbox.js"></script>
+ <script src="extras.js"></script>

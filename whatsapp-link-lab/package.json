@@ -1,0 +1,9 @@
+{
+  "name": "rada-whatsapp-link-lab",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "engines": { "node": ">=20.19" },
+  "scripts": { "test": "node --test", "start": "node server.mjs" },
+  "dependencies": { "@whiskeysockets/baileys": "7.0.0-rc14", "pino": "9.9.5" }
+}
