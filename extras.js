@@ -325,6 +325,7 @@ function renderSettings() {
     }
   }
   pane.innerHTML = h;
+  if (settingsView === 'notif' && window.RadaSounds) window.RadaSounds.mount(pane, defaultReceive);
   const vb2 = pane.querySelector('#v-apply'); if (vb2) vb2.onclick = openVerify;
 }
 function setMsg(t, ok) { const el = $('set-msg'); if (el) { el.textContent = t; el.classList.toggle('ok', !!ok); } }

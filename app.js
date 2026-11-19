@@ -68,7 +68,14 @@ function tone(freq, start, dur, vol = 0.18) {
     o.start(t); o.stop(t + dur + 0.05);
   } catch (e) { /* audio blocked until first click */ }
 }
-const playReceive = () => { if (soundOn()) { tone(880, 0, 0.16); tone(1175, 0.16, 0.28); } };
+const defaultReceive = () => { tone(880, 0, 0.16); tone(1175, 0.16, 0.28); };
+const playReceive = () => {
+  if (!soundOn()) return;
+  try {
+    if (!window.RadaSounds) return defaultReceive();
+    Promise.resolve(window.RadaSounds.play(defaultReceive)).catch(() => {});
+  } catch (e) { /* playback/storage failure must not interrupt chat */ }
+};
 const playSend = () => { if (soundOn()) tone(620, 0, 0.1, 0.1); };
 // Browsers only allow sound after the user has interacted with the page
 document.addEventListener('pointerdown', () => {
