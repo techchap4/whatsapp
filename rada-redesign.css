@@ -136,3 +136,45 @@ body {
   #btn-new { width: 50px; height: 50px; bottom: calc(var(--nav-h) + 10px + var(--sab)); }
 }
 @media (prefers-reduced-motion: reduce) { .sb-head::before, .pop { animation: none; } }
+
+/* Modern green UI: mapped to Rada's existing controls; viewport stays fluid. */
+:root { --green: #00a84f; --green-soft: #dff8e9; --green-ink: #005b2a; }
+@media (prefers-color-scheme: dark) {
+  :root { --green: #25d366; --green-soft: #103629; --green-ink: #d9fdd3; }
+}
+.sb-head {
+  min-height: 92px; padding: 20px 12px 18px 20px;
+  color: #fff; border-radius: 0 0 32px 32px;
+  background: radial-gradient(circle at 90% 10%, rgba(0,190,90,.5), transparent 35%),
+    linear-gradient(135deg,#06251d 0%,#064b32 55%,#008d46 100%);
+}
+.sb-head::before { color: #fff; background: none; animation: none; font-size: 1.8rem; }
+.sb-actions > button { color: #fff; }
+.sb-actions > button:hover, .sb-actions > button:active { background: rgba(255,255,255,.15); }
+.sidebar > .search { padding: 12px 18px 8px; }
+.search input { height: 52px; border-radius: 30px; box-shadow: 0 7px 25px rgba(0,0,0,.06); }
+.chips button { border-radius: 25px; }
+.chips button.active { background: #008c43; color: #fff; box-shadow: none; }
+#pane-chats .item { min-height: 78px; padding: 10px 8px; border-radius: 18px; }
+#pane-chats .item .name { font-size: 1rem; }
+.badge { background: #008c43; color: #fff; }
+#btn-new { width: 60px; height: 60px; border-radius: 50%; color: #fff; background: linear-gradient(145deg,#18c966,#008d45); box-shadow: 0 10px 25px rgba(0,150,70,.35); }
+#btn-new .fab-plus { fill: #008d45; }
+.tabs { margin: 0 12px calc(12px + var(--sab)); padding: 8px 6px; border: 1px solid var(--line); border-radius: 27px; background: var(--bg); box-shadow: 0 10px 35px rgba(0,50,30,.16); }
+.tabs button.active { color: #008c43; }
+.tabs button.active .ni { color: #007b3a; }
+.conv-head { min-height: 76px; color: #fff; background: linear-gradient(135deg,#062a20,#008b46); border-radius: 0 0 28px 28px; box-shadow: none; }
+.conv-head .icon-btn, .conv-head .back, .conv-info .name { color: #fff; }
+.conv-head .icon-btn:hover, .conv-head .back:hover { background: rgba(255,255,255,.15); }
+.conv-info .sub { color: #d9fbe5; }
+.bubble { border-radius: 19px; padding: 10px 14px; }
+.bubble.in { border-top-left-radius: 19px; border-bottom-left-radius: 5px; }
+.bubble.out { border-top-right-radius: 19px; border-bottom-right-radius: 5px; }
+.day { border-radius: 18px; padding: 8px 15px; }
+#composer .pill { border-radius: 27px; }
+.mic, .send { border-radius: 50%; background: linear-gradient(145deg,#15ce64,#008e46); color: #fff; }
+.presence-avatar { display: inline-grid; position: relative; flex: none; }
+.presence-dot { position: absolute; right: 0; bottom: 1px; width: 13px; height: 13px; border-radius: 50%; background: #18d85d; border: 2px solid var(--bg); box-shadow: 0 0 0 1px rgba(0,80,30,.15); }
+.conv-head .presence-dot { border-color: #064b32; }
+@media (max-width: 360px) { .sb-head { padding-left: 12px; padding-right: 4px; } .tabs { margin-left: 6px; margin-right: 6px; } }
+@media (max-height: 480px) and (max-width: 900px) { .sb-head { min-height: 52px; padding-top: 4px; padding-bottom: 4px; } .tabs { margin-bottom: var(--sab); } .conv-head { min-height: 54px; } }
