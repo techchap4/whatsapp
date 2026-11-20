@@ -1,27 +1,44 @@
-/* Additive visual layer: the existing app, settings and chat data remain in charge. */
-body { font-family: "Plus Jakarta Sans", Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
-
-/* Fill the available screen while retaining the original chat-open navigation. */
-#app { grid-template-columns: minmax(0, 1fr); width: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; overflow: hidden; box-shadow: none; }
+/* Rada UI v2: visual overrides only; theme variables remain in control. */
+:root {
+  --gold: #e5a937;
+  --gold-ink: #3b2a00;
+  --nav-h: 68px;
+  --side-w: clamp(320px, 30vw, 440px);
+  --chat-max: 880px;
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sat: env(safe-area-inset-top, 0px);
+  --pad-x: max(10px, calc((100% - var(--chat-max)) / 2));
+}
+html { height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  height: 100%; height: 100dvh; overscroll-behavior: none;
+  font-family: "Plus Jakarta Sans", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+* { scrollbar-width: thin; scrollbar-color: rgba(128, 128, 128, .35) transparent; }
+#app {
+  width: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; box-shadow: none; overflow: hidden;
+  height: var(--app-h, 100dvh); grid-template-columns: minmax(0, 1fr);
+  padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
+}
 #app .chat { display: none; }
 #app.chat-open .sidebar { display: none; }
 #app.chat-open .chat { display: flex; }
 @media (min-width: 761px) {
-  #app { grid-template-columns: 380px minmax(0, 1fr); }
+  #app { grid-template-columns: var(--side-w) minmax(0, 1fr); }
   #app .chat, #app.chat-open .chat { display: flex; }
   #app.chat-open .sidebar { display: flex; }
+  .sidebar { border-right: 1px solid var(--line); }
 }
-
-.sidebar { border-right: 0; }
-.sb-head { padding: 16px 10px 5px 18px; gap: 0; }
+.sidebar { min-width: 0; }
+.sb-head { padding: 14px 8px 4px 18px; gap: 0; }
 .sb-head::before {
   content: "Rada"; font-size: 1.65rem; font-weight: 800; letter-spacing: -.06em;
   color: var(--green); padding-right: 17px;
-  background: radial-gradient(circle, #e5a937 0 32%, transparent 36%) right center / 13px 13px no-repeat;
+  background: radial-gradient(circle, var(--gold) 0 32%, transparent 36%) right center / 13px 13px no-repeat;
   animation: rada-brand-pulse 2.8s ease-in-out infinite;
 }
 @keyframes rada-brand-pulse { 50% { background-size: 17px 17px; } }
-@media (prefers-reduced-motion: reduce) { .sb-head::before { animation: none; } }
 .sb-actions { gap: 0; flex: none; }
 .sb-actions > button { width: 42px; height: 44px; }
 .sb-actions > button:hover { background: var(--surface); }
@@ -29,33 +46,93 @@ body { font-family: "Plus Jakarta Sans", Inter, system-ui, -apple-system, "Segoe
 #me-avatar .avatar { width: 32px; height: 32px; font-size: .84rem; }
 #btn-bell { position: relative; padding: 0; font-size: 1.15rem; }
 #btn-bell .bell-dot { top: 1px; right: 1px; }
-
-.sidebar > .search { padding: 9px 16px 10px; }
-.search input { height: 46px; border: 1px solid var(--line); }
-.search input:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-.chips { padding: 12px 0 2px; }
+.sidebar > .search { padding: 8px 14px 8px; }
+.search input { height: 46px; border: 1px solid var(--line); transition: border-color .15s, box-shadow .15s; }
+.search input:focus { outline: 0; border-color: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 20%, transparent); }
+.chips { padding: 10px 0 2px; }
 .chips button { border-radius: 99px; background: var(--surface); border-color: transparent; font-size: .85rem; }
 .chips button.active { background: var(--green-soft); color: var(--green-ink); box-shadow: inset 0 0 0 1px var(--green); }
-#pane-chats #chat-list { padding: 2px 10px; }
-#pane-chats .item { width: 100%; margin: 3px 0; padding: 11px 10px; border: 1px solid transparent; border-radius: 17px; }
-#pane-chats .item:hover, #pane-chats .item.active { border-color: var(--line); }
+.pane { padding-bottom: calc(92px + var(--sab)); }
+#pane-chats #chat-list { padding: 2px 8px; }
+#pane-chats .item { margin: 2px 0; padding: 10px; gap: 12px; border: 0; border-radius: 16px; transition: background .12s; }
+#pane-chats .item:hover { background: var(--surface); }
+#pane-chats .item.active { background: var(--green-soft); }
 #pane-chats .item .name { font-size: 1rem; font-weight: 700; }
 #pane-chats .item .preview { font-size: .88rem; }
-#btn-new { border-radius: 20px; }
-/* The existing install prompt must not cover the new-chat button. */
-#install-banner { left: 50%; right: auto; width: calc(100% - 24px); max-width: 388px; transform: translateX(-50%); bottom: calc(var(--nav-h) + 95px + env(safe-area-inset-bottom, 0px)); }
-.tabs { padding-top: 9px; }
-.tabs .ni { border-radius: 14px; }
-.conv-head { padding-right: 5px; }
-.bubble { border-radius: 14px; }
-#composer .pill { border: 1px solid var(--line); }
-.modal-card, .pop { box-shadow: 0 16px 42px rgba(0, 0, 0, .18); }
-.auth-card { gap: 14px; }
+.badge { background: var(--gold); color: var(--gold-ink); }
+#btn-new {
+  right: 16px; bottom: calc(var(--nav-h) + 16px + var(--sab)); width: 58px; height: 58px; border-radius: 20px;
+  background: linear-gradient(145deg, var(--green), color-mix(in srgb, var(--green) 76%, #000));
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .25);
+}
+#btn-new .fab-plus { fill: color-mix(in srgb, var(--green) 80%, #000); }
+.tabs {
+  flex-shrink: 0; padding: 8px 6px calc(8px + var(--sab));
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.tabs button { min-width: 0; gap: 3px; font-size: .72rem; }
+.tabs button > span:not(.ni):not(.badge) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tabs .ni { width: 60px; height: 30px; border-radius: 15px; }
+#install-banner {
+  left: 50%; right: auto; width: calc(100% - 24px); max-width: 388px; transform: translateX(-50%);
+  bottom: calc(var(--nav-h) + 90px + var(--sab));
+}
+#empty { background: radial-gradient(circle at 50% 38%, var(--green-soft), transparent 62%), var(--surface); }
+.conv-head {
+  position: relative; z-index: 3; gap: 6px; padding: calc(8px + var(--sat)) 6px 8px 4px;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-bottom: 0; box-shadow: 0 1px 0 var(--line);
+}
+.conv-info .name { font-size: 1.05rem; font-weight: 700; }
+.conv-actions .icon-btn { width: 40px; }
+#messages { padding: 14px var(--pad-x); gap: 4px; }
+.bubble { max-width: min(82%, 560px); padding: 7px 11px; border-radius: 18px; }
+.bubble.in { border-top-left-radius: 6px; }
+.bubble.out { border-top-right-radius: 6px; }
+#composer { padding: 8px var(--pad-x) calc(10px + var(--sab)); gap: 8px; }
+#composer .pill { border: 1px solid var(--line); box-shadow: 0 1px 3px rgba(0, 0, 0, .06); transition: border-color .15s, box-shadow .15s; }
+#composer .pill:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 20%, transparent); }
+.mic, .send { width: 50px; height: 50px; box-shadow: 0 4px 12px rgba(0, 0, 0, .18); }
+#rec-bar { padding-left: var(--pad-x); padding-right: var(--pad-x); }
+#emoji-panel { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
+.pop { min-width: 210px; max-width: calc(100vw - 16px); border-radius: 16px; box-shadow: 0 16px 42px rgba(0, 0, 0, .2); transform-origin: top right; animation: rada-pop .14s ease-out; }
+@keyframes rada-pop { from { opacity: 0; transform: scale(.96) translateY(-4px); } }
+.modal-card { max-height: min(90dvh, 760px); box-shadow: 0 16px 42px rgba(0, 0, 0, .2); }
+@media (max-width: 599px) { .modal-card { max-height: 92dvh; padding-bottom: var(--sab); } }
+.mbody { max-height: calc(100dvh - 80px); }
+@media (min-width: 761px) {
+  #status-viewer { inset: 0 auto 0 50%; width: min(480px, 100%); transform: translateX(-50%); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .85); }
+}
+#auth { display: flex; padding: max(20px, var(--sat)) 20px max(20px, var(--sab)); }
+.auth-card { margin: auto; max-width: 400px; gap: 14px; }
 @media (min-width: 600px) {
-  #auth { background: var(--frame); }
-  .auth-card { background: var(--bg); border: 1px solid var(--line); border-radius: 24px; padding: 24px; box-shadow: 0 18px 60px rgba(17, 45, 30, .12); }
+  #auth { background: radial-gradient(circle at 50% 0%, var(--green-soft), transparent 55%), var(--frame); }
+  .auth-card { background: var(--bg); border: 1px solid var(--line); border-radius: 24px; padding: 28px; box-shadow: 0 18px 60px rgba(17, 45, 30, .14); }
 }
-@media (max-width: 350px) {
-  .sb-head { padding-left: 12px; padding-right: 4px; }
-  .sb-actions > button { width: 40px; }
+.set-tog input { accent-color: var(--green); }
+.n-go { background: var(--green); }
+.mini { border-color: var(--green); color: var(--green); }
+.ghostbtn { color: var(--green) !important; border-color: var(--green) !important; }
+@media (max-width: 360px) {
+  .sb-head { padding-left: 12px; padding-right: 2px; }
+  .sb-actions > button { width: 38px; }
+  .tabs .ni { width: 52px; }
+  .tabs button { font-size: .68rem; }
+  .bubble { max-width: 88%; }
 }
+@media (max-height: 480px) and (max-width: 900px) {
+  :root { --nav-h: 46px; }
+  .sb-head { padding-top: 4px; padding-bottom: 0; }
+  .sidebar > .search { padding: 4px 12px 6px; }
+  .search input { height: 38px; }
+  .tabs { padding-top: 4px; padding-bottom: calc(4px + var(--sab)); }
+  .tabs .ni { height: 26px; width: 52px; }
+  /* Keep labels available to screen readers and retain unread badges. */
+  .tabs button > span:not(.ni):not(.badge) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  .conv-head { padding-top: calc(4px + var(--sat)); padding-bottom: 4px; }
+  #composer { padding-top: 4px; padding-bottom: calc(6px + var(--sab)); }
+  #btn-new { width: 50px; height: 50px; bottom: calc(var(--nav-h) + 10px + var(--sab)); }
+}
+@media (prefers-reduced-motion: reduce) { .sb-head::before, .pop { animation: none; } }
