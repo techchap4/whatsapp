@@ -173,8 +173,9 @@ body {
 .day { border-radius: 18px; padding: 8px 15px; }
 #composer .pill { border-radius: 27px; }
 .mic, .send { border-radius: 50%; background: linear-gradient(145deg,#15ce64,#008e46); color: #fff; }
-.presence-avatar { display: inline-grid; position: relative; flex: none; }
-.presence-dot { position: absolute; right: 0; bottom: 1px; width: 13px; height: 13px; border-radius: 50%; background: #18d85d; border: 2px solid var(--bg); box-shadow: 0 0 0 1px rgba(0,80,30,.15); }
-.conv-head .presence-dot { border-color: #064b32; }
+#chat-list .item[data-id], #conv-avatar { position: relative; }
+.presence-dot { position: absolute; width: 13px; height: 13px; border-radius: 50%; background: #18d85d; border: 2px solid var(--bg); box-shadow: 0 0 0 1px rgba(0,80,30,.15); pointer-events: none; }
+#chat-list .item[data-id] > .presence-dot { left: 48px; top: calc(50% + 13px); }
+#conv-avatar > .presence-dot { right: 0; bottom: 1px; border-color: #064b32; }
 @media (max-width: 360px) { .sb-head { padding-left: 12px; padding-right: 4px; } .tabs { margin-left: 6px; margin-right: 6px; } }
 @media (max-height: 480px) and (max-width: 900px) { .sb-head { min-height: 52px; padding-top: 4px; padding-bottom: 4px; } .tabs { margin-bottom: var(--sab); } .conv-head { min-height: 54px; } }
