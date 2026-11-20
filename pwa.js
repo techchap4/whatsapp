@@ -86,3 +86,5 @@
     window.addEventListener('popstate', () => { if (isOpen() && $('btn-back')) $('btn-back').click(); });
   }
 })();
+// Load the independent presence indicator after the app scripts.
+{ const dotScript = document.createElement("script"); dotScript.src = new URL("rada-presence.js", document.baseURI).href; document.body.appendChild(dotScript); }
