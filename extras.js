@@ -122,8 +122,8 @@ function hideBan() { const el = $('ban-screen'); if (el) el.remove(); }
 function addHeaderButtons() {
   if (!$('btn-bell')) {
     const b = document.createElement('button'); b.id = 'btn-bell'; b.type = 'button'; b.title = 'Notifications'; b.setAttribute('aria-label', 'Notifications');
-    b.innerHTML = '🔔<span id="bell-dot" class="bell-dot hidden"></span>'; b.onclick = openNotifs;
-    $('btn-new').before(b);
+    b.innerHTML = '<svg class="so" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-2 7-2 9h16c0-2-2-2-2-9M10 20h4"/></svg><span id="bell-dot" class="bell-dot hidden"></span>'; b.onclick = openNotifs;
+    $('btn-cam-status').before(b);
   }
   if (!$('btn-more')) {
     const b = document.createElement('button'); b.id = 'btn-more'; b.type = 'button'; b.className = 'icon-btn'; b.title = 'More'; b.setAttribute('aria-label', 'More'); b.textContent = '⋮';
