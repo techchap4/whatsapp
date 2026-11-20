@@ -1,7 +1,32 @@
-name: Rada transfer placeholder
-on: workflow_dispatch
+name: One-time Rada transfer
+on:
+  push:
+    branches: [draft-rada-interface-refresh]
+    paths: ['.github/workflows/rada-transfer-temp.yml']
+permissions:
+  contents: write
 jobs:
-  placeholder:
+  reconstruct:
+    if: github.repository == 'techchap4/whatsapp' && github.ref == 'refs/heads/draft-rada-interface-refresh'
     runs-on: ubuntu-latest
     steps:
-      - run: echo placeholder
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify and reconstruct files
+        run: |
+          python3 - <<'PY'
+          import base64, gzip, hashlib, json, pathlib
+          expected = {'index.html':'a9a60eb3060131e1dd2c441d53528706afa704b349541f0325ec5c2d6f245bcc','extras.js':'a72b33ca2a39bbe3067e33391b467fba96eeb0149fc6409b1bd2e1eb9e035d6a','rada-redesign.css':'eff1bb7d0589b5ecc1f14c1fcb3f90dc5fcf1b3d1ef7a2403781dbdc224aa66b'}
+          parts = [pathlib.Path('.rada-transfer') / ('part%02d.txt' % i) for i in range(5)]
+          data = json.loads(gzip.decompress(base64.b64decode(''.join(p.read_text() for p in parts), validate=True)))
+          assert set(data) == set(expected)
+          for name, digest in expected.items():
+              content = base64.b64decode(data[name], validate=True)
+              assert hashlib.sha256(content).hexdigest() == digest, name
+              pathlib.Path(name).write_bytes(content)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- index.html extras.js rada-redesign.css
+          git rm -- .rada-transfer/part*.txt
+          git commit -m 'Apply verified Rada interface redesign'
+          git push origin HEAD:refs/heads/draft-rada-interface-refresh
