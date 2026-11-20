@@ -1,0 +1,66 @@
+/* Additive visual layer: the existing app, settings and chat data remain in charge. */
+body { font-family: "Plus Jakarta Sans", Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+
+/* A single mobile-style view at every width. Navigation still uses the original
+   chat-open state; desktop needs its existing Back button restored. */
+#app { grid-template-columns: minmax(0, 1fr); width: 100%; max-width: 412px; }
+#app .chat { display: none; }
+#app.chat-open .sidebar { display: none; }
+#app.chat-open .chat { display: flex; }
+@media (min-width: 761px) {
+  #app { grid-template-columns: 380px minmax(0, 1fr); max-width: 1400px; }
+  #app .chat, #app.chat-open .chat { display: flex; }
+  #app.chat-open .sidebar { display: flex; }
+}
+@media (min-width: 600px) {
+  body { background: var(--frame); }
+  #app { height: min(var(--app-h, 100dvh), calc(100dvh - 36px)); margin: 18px auto; border: 1px solid var(--line); border-radius: 26px; overflow: hidden; box-shadow: 0 18px 60px rgba(17, 45, 30, .18); }
+}
+
+.sidebar { border-right: 0; }
+.sb-head { padding: 16px 10px 5px 18px; gap: 0; }
+.sb-head::before {
+  content: "Rada"; font-size: 1.65rem; font-weight: 800; letter-spacing: -.06em;
+  color: var(--green); padding-right: 17px;
+  background: radial-gradient(circle, #e5a937 0 32%, transparent 36%) right center / 13px 13px no-repeat;
+  animation: rada-brand-pulse 2.8s ease-in-out infinite;
+}
+@keyframes rada-brand-pulse { 50% { background-size: 17px 17px; } }
+@media (prefers-reduced-motion: reduce) { .sb-head::before { animation: none; } }
+.sb-actions { gap: 0; flex: none; }
+.sb-actions > button { width: 42px; height: 44px; }
+.sb-actions > button:hover { background: var(--surface); }
+#me-avatar { display: grid; place-items: center; border-radius: 50%; }
+#me-avatar .avatar { width: 32px; height: 32px; font-size: .84rem; }
+#btn-bell { position: relative; padding: 0; font-size: 1.15rem; }
+#btn-bell .bell-dot { top: 1px; right: 1px; }
+
+.sidebar > .search { padding: 9px 16px 10px; }
+.search input { height: 46px; border: 1px solid var(--line); }
+.search input:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.chips { padding: 12px 0 2px; }
+.chips button { border-radius: 99px; background: var(--surface); border-color: transparent; font-size: .85rem; }
+.chips button.active { background: var(--green-soft); color: var(--green-ink); box-shadow: inset 0 0 0 1px var(--green); }
+#pane-chats #chat-list { padding: 2px 10px; }
+#pane-chats .item { width: 100%; margin: 3px 0; padding: 11px 10px; border: 1px solid transparent; border-radius: 17px; }
+#pane-chats .item:hover, #pane-chats .item.active { border-color: var(--line); }
+#pane-chats .item .name { font-size: 1rem; font-weight: 700; }
+#pane-chats .item .preview { font-size: .88rem; }
+#btn-new { border-radius: 20px; }
+/* The existing install prompt must not cover the new-chat button. */
+#install-banner { left: 50%; right: auto; width: calc(100% - 24px); max-width: 388px; transform: translateX(-50%); bottom: calc(var(--nav-h) + 95px + env(safe-area-inset-bottom, 0px)); }
+.tabs { padding-top: 9px; }
+.tabs .ni { border-radius: 14px; }
+.conv-head { padding-right: 5px; }
+.bubble { border-radius: 14px; }
+#composer .pill { border: 1px solid var(--line); }
+.modal-card, .pop { box-shadow: 0 16px 42px rgba(0, 0, 0, .18); }
+.auth-card { gap: 14px; }
+@media (min-width: 600px) {
+  #auth { background: var(--frame); }
+  .auth-card { background: var(--bg); border: 1px solid var(--line); border-radius: 24px; padding: 24px; box-shadow: 0 18px 60px rgba(17, 45, 30, .12); }
+}
+@media (max-width: 350px) {
+  .sb-head { padding-left: 12px; padding-right: 4px; }
+  .sb-actions > button { width: 40px; }
+}

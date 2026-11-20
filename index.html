@@ -17,6 +17,7 @@
   <link rel="apple-touch-icon" href="icon-maskable-512.png">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="extras.css">
+  <link rel="stylesheet" href="rada-redesign.css">
   <!-- NEW: WhatsApp link feature styles -->
   <link rel="stylesheet" href="whatsapp.css">
 </head>
@@ -101,11 +102,11 @@
 <div id="app" class="hidden">
   <aside class="sidebar">
     <header class="sb-head">
-      <div id="me-avatar" class="clickable" title="My profile"></div>
       <div class="sb-actions">
         <button id="btn-cam-status" type="button" title="Camera" aria-label="Camera">
           <svg class="so" viewBox="0 0 24 24"><path d="M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4H9z"/><circle cx="12" cy="13" r="3.6"/></svg>
         </button>
+        <button id="me-avatar" class="clickable" type="button" title="My profile" aria-label="My profile"></button>
         <button id="btn-topmore" type="button" title="More options" aria-label="More options">
           <svg class="fl" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
         </button>
@@ -119,7 +120,7 @@
       </div>
     </header>
 
-    <div id="chat-search" class="search"><input id="search" type="search" placeholder="Search"></div>
+    <div id="chat-search" class="search"><input id="search" type="search" placeholder="Search" aria-label="Search chats"></div>
 
     <div id="pane-chats" class="pane">
       <div id="chat-list"></div>
