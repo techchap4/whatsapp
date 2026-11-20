@@ -1,20 +1,15 @@
 /* Additive visual layer: the existing app, settings and chat data remain in charge. */
 body { font-family: "Plus Jakarta Sans", Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
 
-/* A single mobile-style view at every width. Navigation still uses the original
-   chat-open state; desktop needs its existing Back button restored. */
-#app { grid-template-columns: minmax(0, 1fr); width: 100%; max-width: 412px; }
+/* Fill the available screen while retaining the original chat-open navigation. */
+#app { grid-template-columns: minmax(0, 1fr); width: 100%; max-width: none; margin: 0; border: 0; border-radius: 0; overflow: hidden; box-shadow: none; }
 #app .chat { display: none; }
 #app.chat-open .sidebar { display: none; }
 #app.chat-open .chat { display: flex; }
 @media (min-width: 761px) {
-  #app { grid-template-columns: 380px minmax(0, 1fr); max-width: 1400px; }
+  #app { grid-template-columns: 380px minmax(0, 1fr); }
   #app .chat, #app.chat-open .chat { display: flex; }
   #app.chat-open .sidebar { display: flex; }
-}
-@media (min-width: 600px) {
-  body { background: var(--frame); }
-  #app { height: min(var(--app-h, 100dvh), calc(100dvh - 36px)); margin: 18px auto; border: 1px solid var(--line); border-radius: 26px; overflow: hidden; box-shadow: 0 18px 60px rgba(17, 45, 30, .18); }
 }
 
 .sidebar { border-right: 0; }
