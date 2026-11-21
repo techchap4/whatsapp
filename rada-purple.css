@@ -1,0 +1,151 @@
+/* Rada purple visual skin. Load after rada-redesign.css.
+   No markup, script, data, or privacy behavior is changed.
+   Rada Purple is the default; other app theme choices remain available. Chat themes remain controlled by app.js. */
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) {
+  --bg: #100d19;
+  --surface: #1d1729;
+  --ink: #f6f1ff;
+  --mute: #bcb1cb;
+  --line: #352b46;
+  --green: #c6a5ff;
+  --green-soft: #38244f;
+  --green-ink: #f4ebff;
+  --frame: #09070e;
+  --tick: #d8b9ff;
+  --shadow: 0 12px 35px rgba(0, 0, 0, .35);
+  color: var(--ink);
+  background: var(--frame);
+  color-scheme: dark;
+}
+
+/* Scope the new palette to Rada, so saved alternative app themes work. */
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #splash,
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #auth {
+  background: radial-gradient(ellipse at 50% 0%, #301a4c 0, transparent 58%), #100d19;
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .auth-card {
+  background: #171120;
+  border-color: #3c2c50;
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .auth-card h1 { color: #d4baff; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .primary,
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .ib-go,
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .n-go {
+  background: #7440c4;
+  color: #fff;
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #app { background: #100d19; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .sidebar { background: #100d19; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .sb-head {
+  min-height: 88px;
+  padding: 18px 12px 16px 20px;
+  background: radial-gradient(ellipse at 85% 0%, #4a286b 0, transparent 58%), linear-gradient(135deg, #1b1129, #241332 70%, #331c49);
+  border-bottom: 1px solid #49325f;
+  border-radius: 0 0 28px 28px;
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .sb-head::before {
+  color: #d0adff;
+  font-size: 1.85rem;
+  letter-spacing: -.055em;
+  text-shadow: 0 0 24px rgba(178, 112, 255, .25);
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .sb-actions > button { color: #f4ecff; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .sidebar > .search { padding: 14px 16px 8px; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .search input {
+  background-color: #21192d;
+  border: 1px solid #3b2d4c;
+  box-shadow: none;
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .search input:focus,
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #composer .pill:focus-within {
+  border-color: #b38af5;
+  box-shadow: 0 0 0 3px rgba(179, 138, 245, .18);
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .chips button.active {
+  background: #5a348b;
+  color: #fff;
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #pane-chats #chat-list { padding: 4px 10px; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #pane-chats .item {
+  margin: 4px 0;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 18px;
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #pane-chats .item:hover,
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #pane-chats .item:active { background: #21192e; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #pane-chats .item.active {
+  background: #2c1e3d;
+  border-color: #52366d;
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .badge { background: #7340bb; color: #fff; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #btn-new {
+  color: #fff;
+  background: linear-gradient(145deg, #955ce4, #6030a6);
+  box-shadow: 0 9px 24px rgba(106, 55, 177, .42);
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #btn-new .fab-plus { fill: #6735aa; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .tabs {
+  background: #191321;
+  border-color: #352942;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, .32);
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .tabs button.active,
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .tabs button.active .ni { color: #e3d0ff; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .tabs button.active .ni { background: #4b3068; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #empty {
+  background: radial-gradient(ellipse at 50% 40%, #2a1b3a, transparent 60%), #120e1b;
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .conv-head {
+  background: linear-gradient(125deg, #20132f, #37204d);
+  border-bottom: 1px solid #49325f;
+  box-shadow: none;
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .conv-info .sub { color: #d8c7e8; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #conv-avatar > .presence-dot { border-color: #302044; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .mic,
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .send {
+  background: linear-gradient(145deg, #955ce4, #6030a6);
+  color: #fff;
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #composer .pill { background: #21192d; }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .pop { border-color: #443352; }
+
+/* app.js sets chat colors inline. Replace only the exact built-in Classic
+   palette; all non-default per-chat palettes retain their own colors. */
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #conv:not([style*="--bg-chat"]),
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) #conv[style*="--bg-chat: #efeae2"] {
+  --bg-chat: #100c18 !important;
+  --bubble-out: #65389c !important;
+  --bubble-in: #292036 !important;
+  --bub-text: #fff8ff !important;
+  --dots: rgba(191, 149, 245, .035) !important;
+}
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) .bubble { box-shadow: 0 3px 12px rgba(0,0,0,.15); }
+:where(body:not([data-app-theme]), body[data-app-theme="rada"]) :focus-visible { outline-color: #d0b2ff; }
+/* features.js injects group-view styles after linked CSS, so these selectors
+   are deliberately more specific without changing any controls or layout. */
+:is(body:not([data-app-theme]), body[data-app-theme="rada"]) .g-link { color: #d2b4ff; }
+:is(body:not([data-app-theme]), body[data-app-theme="rada"]) #gv { background: #100c18; color: #f6f1ff; }
+:is(body:not([data-app-theme]), body[data-app-theme="rada"]) #gv > header {
+  background: linear-gradient(125deg, #20132f, #37204d);
+  border-bottom: 1px solid #49325f;
+}
+:is(body:not([data-app-theme]), body[data-app-theme="rada"]) #gv .gm { background: #292036; color: #fff8ff; border-radius: 16px 16px 16px 5px; }
+:is(body:not([data-app-theme]), body[data-app-theme="rada"]) #gv .gm.me { background: #65389c; border-radius: 16px 16px 5px 16px; }
+:is(body:not([data-app-theme]), body[data-app-theme="rada"]) #gv .gm-day { background: #292036; color: #f6f1ff; }
+:is(body:not([data-app-theme]), body[data-app-theme="rada"]) #gv-form,
+:is(body:not([data-app-theme]), body[data-app-theme="rada"]) #gv-lock { background: #171120; }
+:is(body:not([data-app-theme]), body[data-app-theme="rada"]) #gv-input { background: #21192d; color: #f6f1ff; }
+:is(body:not([data-app-theme]), body[data-app-theme="rada"]) #gv-send { background: #7440c4; color: #fff; }
+@media (max-width: 360px) {
+  :where(body:not([data-app-theme]), body[data-app-theme="rada"]) .sb-head { padding-left: 12px; padding-right: 4px; }
+  :where(body:not([data-app-theme]), body[data-app-theme="rada"]) #pane-chats #chat-list { padding-left: 6px; padding-right: 6px; }
+}
+@media (max-height: 480px) and (max-width: 900px) {
+  :where(body:not([data-app-theme]), body[data-app-theme="rada"]) .sb-head { min-height: 52px; padding-top: 4px; padding-bottom: 4px; }
+  :where(body:not([data-app-theme]), body[data-app-theme="rada"]) .sidebar > .search { padding-top: 4px; padding-bottom: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(body:not([data-app-theme]), body[data-app-theme="rada"]) .sb-head::before { animation: none; }
+}
